@@ -364,7 +364,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[900px]">
+      <DialogContent className="sm:max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="p-2 bg-primary/10 rounded-lg">
@@ -477,65 +477,69 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               <span className="text-sm font-medium">Page Access</span>
             </div>
             <div className="border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-5 gap-2 p-3 bg-muted/50 text-xs font-medium">
-                <div>Page</div>
-                <div className="text-center flex items-center justify-center gap-1">
-                  <Eye className="w-3 h-3" /> View
-                </div>
-                <div className="text-center flex items-center justify-center gap-1">
-                  <Edit className="w-3 h-3" /> Edit
-                </div>
-                <div className="text-center flex items-center justify-center gap-1">
-                  <Trash2 className="w-3 h-3" /> Delete
-                </div>
-                <div className="text-center flex items-center justify-center gap-1">
-                  <Plus className="w-3 h-3" /> Create
-                </div>
-              </div>
-              {pages.map((page) => {
-                const access = formData.pageAccess.find((p) => p.page === page.id)!;
-                const Icon = page.icon;
-                return (
-                  <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t items-center">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Icon className="w-4 h-4 text-muted-foreground" />
-                      {page.name}
+              <div className="overflow-x-auto">
+                <div className="min-w-[520px]">
+                  <div className="grid grid-cols-5 gap-2 p-3 bg-muted/50 text-xs font-medium">
+                    <div>Page</div>
+                    <div className="text-center flex items-center justify-center gap-1">
+                      <Eye className="w-3 h-3" /> View
                     </div>
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={access.canView}
-                        onCheckedChange={(checked) =>
-                          updatePageAccess(page.id, "canView", !!checked)
-                        }
-                      />
+                    <div className="text-center flex items-center justify-center gap-1">
+                      <Edit className="w-3 h-3" /> Edit
                     </div>
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={access.canEdit}
-                        onCheckedChange={(checked) =>
-                          updatePageAccess(page.id, "canEdit", !!checked)
-                        }
-                      />
+                    <div className="text-center flex items-center justify-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Delete
                     </div>
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={access.canDelete}
-                        onCheckedChange={(checked) =>
-                          updatePageAccess(page.id, "canDelete", !!checked)
-                        }
-                      />
-                    </div>
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={access.canCreate}
-                        onCheckedChange={(checked) =>
-                          updatePageAccess(page.id, "canCreate", !!checked)
-                        }
-                      />
+                    <div className="text-center flex items-center justify-center gap-1">
+                      <Plus className="w-3 h-3" /> Create
                     </div>
                   </div>
-                );
-              })}
+                  {pages.map((page) => {
+                    const access = formData.pageAccess.find((p) => p.page === page.id)!;
+                    const Icon = page.icon;
+                    return (
+                      <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t items-center">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                          {page.name}
+                        </div>
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={access.canView}
+                            onCheckedChange={(checked) =>
+                              updatePageAccess(page.id, "canView", !!checked)
+                            }
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={access.canEdit}
+                            onCheckedChange={(checked) =>
+                              updatePageAccess(page.id, "canEdit", !!checked)
+                            }
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={access.canDelete}
+                            onCheckedChange={(checked) =>
+                              updatePageAccess(page.id, "canDelete", !!checked)
+                            }
+                          />
+                        </div>
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={access.canCreate}
+                            onCheckedChange={(checked) =>
+                              updatePageAccess(page.id, "canCreate", !!checked)
+                            }
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -561,15 +565,15 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-xs text-muted-foreground">
               Total active permissions: <strong>{getActivePermissionsCount()}</strong>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
-              <Button className="gap-2" onClick={handleSubmit}>
+              <Button className="gap-2 flex-1 sm:flex-none" onClick={handleSubmit}>
                 <Check className="w-4 h-4" />
                 Create User
               </Button>
