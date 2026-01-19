@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import auraLogo from "@/assets/aura-auth-logo.png";
 import auraScriptLogo from "@/assets/aura-script-logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 // Validation schemas
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -91,14 +92,21 @@ const Auth = () => {
     setIsLoading(true);
     setErrors({});
 
-    // Simulate login
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast.error("Login failed", { description: error.message });
+      setIsLoading(false);
+      return;
+    }
+
     toast.success("Welcome back!", {
       description: "You have successfully logged in.",
     });
-    
-    // Redirect to dashboard
+
     window.location.href = "/";
   };
 
@@ -124,13 +132,26 @@ const Auth = () => {
     setIsLoading(true);
     setErrors({});
 
-    // Simulate signup
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    if (error) {
+      toast.error("Sign up failed", { description: error.message });
+      setIsLoading(false);
+      return;
+    }
+
     toast.success("Account created!", {
       description: "Please check your email to verify your account.",
     });
-    
+
     setMode("login");
     setIsLoading(false);
   };
@@ -147,9 +168,16 @@ const Auth = () => {
     setIsLoading(true);
     setErrors({});
 
-    // Simulate password reset
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+
+    if (error) {
+      toast.error("Reset failed", { description: error.message });
+      setIsLoading(false);
+      return;
+    }
+
     setMode("reset-sent");
     setIsLoading(false);
   };

@@ -14,7 +14,421 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      users: {
+        Row: {
+          id: string
+          auth_user_id: string | null
+          user_code: string | null
+          name: string
+          email: string
+          role: Database["public"]["Enums"]["user_role"]
+          department: string | null
+          status: Database["public"]["Enums"]["user_status"]
+          avatar: string | null
+          last_login_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          auth_user_id?: string | null
+          user_code?: string | null
+          name: string
+          email: string
+          role?: Database["public"]["Enums"]["user_role"]
+          department?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
+          avatar?: string | null
+          last_login_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          auth_user_id?: string | null
+          user_code?: string | null
+          name?: string
+          email?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          department?: string | null
+          status?: Database["public"]["Enums"]["user_status"]
+          avatar?: string | null
+          last_login_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_settings: {
+        Row: {
+          id: string
+          user_id: string
+          theme: string | null
+          start_collapsed: boolean
+          sticky_header: boolean
+          top_nav_mode: boolean
+          sidebar_style: string | null
+          font_size: string | null
+          compact_mode: boolean
+          email_notifications: Json
+          push_notifications: Json
+          security_preferences: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          theme?: string | null
+          start_collapsed?: boolean
+          sticky_header?: boolean
+          top_nav_mode?: boolean
+          sidebar_style?: string | null
+          font_size?: string | null
+          compact_mode?: boolean
+          email_notifications?: Json
+          push_notifications?: Json
+          security_preferences?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          theme?: string | null
+          start_collapsed?: boolean
+          sticky_header?: boolean
+          top_nav_mode?: boolean
+          sidebar_style?: string | null
+          font_size?: string | null
+          compact_mode?: boolean
+          email_notifications?: Json
+          push_notifications?: Json
+          security_preferences?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_page_access: {
+        Row: {
+          id: string
+          user_id: string
+          page: string
+          can_view: boolean
+          can_edit: boolean
+          can_delete: boolean
+          can_create: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          page: string
+          can_view?: boolean
+          can_edit?: boolean
+          can_delete?: boolean
+          can_create?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          page?: string
+          can_view?: boolean
+          can_edit?: boolean
+          can_delete?: boolean
+          can_create?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_permissions: {
+        Row: {
+          id: string
+          user_id: string
+          can_export_data: boolean
+          can_import_data: boolean
+          can_manage_users: boolean
+          can_view_reports: boolean
+          can_manage_settings: boolean
+          can_approve_requests: boolean
+          can_bulk_operations: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          can_export_data?: boolean
+          can_import_data?: boolean
+          can_manage_users?: boolean
+          can_view_reports?: boolean
+          can_manage_settings?: boolean
+          can_approve_requests?: boolean
+          can_bulk_operations?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          can_export_data?: boolean
+          can_import_data?: boolean
+          can_manage_users?: boolean
+          can_view_reports?: boolean
+          can_manage_settings?: boolean
+          can_approve_requests?: boolean
+          can_bulk_operations?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      permits: {
+        Row: {
+          id: string
+          permit_code: string | null
+          guest_name: string
+          arrival_date: string
+          departure_date: string
+          nationality: string | null
+          passport_no: string | null
+          status: Database["public"]["Enums"]["permit_status"]
+          uploaded: boolean
+          last_updated_at: string | null
+          updated_by: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          permit_code?: string | null
+          guest_name: string
+          arrival_date: string
+          departure_date: string
+          nationality?: string | null
+          passport_no?: string | null
+          status?: Database["public"]["Enums"]["permit_status"]
+          uploaded?: boolean
+          last_updated_at?: string | null
+          updated_by?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          permit_code?: string | null
+          guest_name?: string
+          arrival_date?: string
+          departure_date?: string
+          nationality?: string | null
+          passport_no?: string | null
+          status?: Database["public"]["Enums"]["permit_status"]
+          uploaded?: boolean
+          last_updated_at?: string | null
+          updated_by?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      permit_history: {
+        Row: {
+          id: string
+          permit_id: string
+          action: string
+          action_by: string | null
+          action_at: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          permit_id: string
+          action: string
+          action_by?: string | null
+          action_at?: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          permit_id?: string
+          action?: string
+          action_by?: string | null
+          action_at?: string
+          metadata?: Json
+        }
+      }
+      tickets: {
+        Row: {
+          id: string
+          ticket_code: string | null
+          title: string
+          description: string | null
+          category: string | null
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          status: Database["public"]["Enums"]["ticket_status"]
+          created_by: string | null
+          assigned_to: string | null
+          comments_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_code?: string | null
+          title: string
+          description?: string | null
+          category?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          created_by?: string | null
+          assigned_to?: string | null
+          comments_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ticket_code?: string | null
+          title?: string
+          description?: string | null
+          category?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          created_by?: string | null
+          assigned_to?: string | null
+          comments_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          message: string
+          type: Database["public"]["Enums"]["notification_type"]
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          message: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          message?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          read?: boolean
+          created_at?: string
+        }
+      }
+      reports: {
+        Row: {
+          id: string
+          report_type: string
+          title: string
+          description: string | null
+          filters: Json
+          created_by: string | null
+          file_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          report_type: string
+          title: string
+          description?: string | null
+          filters?: Json
+          created_by?: string | null
+          file_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          report_type?: string
+          title?: string
+          description?: string | null
+          filters?: Json
+          created_by?: string | null
+          file_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_activity: {
+        Row: {
+          id: string
+          user_id: string
+          action: string
+          entity_type: string | null
+          entity_id: string | null
+          metadata: Json
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          action: string
+          entity_type?: string | null
+          entity_id?: string | null
+          metadata?: Json
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          action?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          metadata?: Json
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+      }
+      user_login: {
+        Row: {
+          id: string
+          user_id: string
+          login_at: string
+          success: boolean
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          login_at?: string
+          success?: boolean
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          login_at?: string
+          success?: boolean
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +437,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "manager" | "staff" | "viewer" | "analyst" | "user"
+      user_status: "active" | "inactive"
+      permit_status: "pending" | "approved" | "rejected" | "uploaded"
+      ticket_priority: "low" | "medium" | "high" | "critical"
+      ticket_status: "open" | "in_progress" | "resolved" | "closed"
+      notification_type: "info" | "warning" | "success" | "error"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +569,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "manager", "staff", "viewer", "analyst", "user"],
+      user_status: ["active", "inactive"],
+      permit_status: ["pending", "approved", "rejected", "uploaded"],
+      ticket_priority: ["low", "medium", "high", "critical"],
+      ticket_status: ["open", "in_progress", "resolved", "closed"],
+      notification_type: ["info", "warning", "success", "error"],
+    },
   },
 } as const

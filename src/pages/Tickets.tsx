@@ -45,11 +45,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { toast } from "sonner";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { supabase } from "@/integrations/supabase/client";
 
 const container = {
   hidden: { opacity: 0 },
@@ -74,14 +75,14 @@ interface Ticket {
   comments: number;
 }
 
-const mockTickets: Ticket[] = [
-  { id: "TKT-001", title: "Data entry error in permit PRM-045", category: "Data Entry Error", priority: "high", status: "open", createdBy: "John Doe", assignedTo: "Support Team", createdAt: "2026-01-17", lastUpdated: "2 hours ago", comments: 3 },
-  { id: "TKT-002", title: "Portal upload failing for batch permits", category: "Portal Upload Issue", priority: "critical", status: "in_progress", createdBy: "Jane Smith", assignedTo: "Admin", createdAt: "2026-01-16", lastUpdated: "30 min ago", comments: 8 },
-  { id: "TKT-003", title: "Status clarification needed for PRM-067", category: "Status Clarification", priority: "medium", status: "open", createdBy: "Mike Johnson", assignedTo: "Unassigned", createdAt: "2026-01-16", lastUpdated: "1 day ago", comments: 2 },
-  { id: "TKT-004", title: "System bug: duplicate entries appearing", category: "System Bug", priority: "high", status: "in_progress", createdBy: "Sarah Williams", assignedTo: "Tech Team", createdAt: "2026-01-15", lastUpdated: "4 hours ago", comments: 12 },
-  { id: "TKT-005", title: "Request for new permit category", category: "Other", priority: "low", status: "resolved", createdBy: "Admin", assignedTo: "Admin", createdAt: "2026-01-14", lastUpdated: "2 days ago", comments: 5 },
-  { id: "TKT-006", title: "Guest name correction required", category: "Data Entry Error", priority: "medium", status: "closed", createdBy: "John Doe", assignedTo: "Support Team", createdAt: "2026-01-12", lastUpdated: "3 days ago", comments: 4 },
-];
+const toRelativeTime = (dateValue?: string | null) => {
+  if (!dateValue) return "";
+  try {
+    return formatDistanceToNow(new Date(dateValue), { addSuffix: true });
+  } catch {
+    return dateValue;
+  }
+};
 
 const priorityConfig = {
   low: { label: "Low", className: "bg-muted text-muted-foreground" },
@@ -193,6 +194,7 @@ interface NewTicketForm {
 
 const Tickets = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
@@ -200,7 +202,7 @@ const Tickets = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
-  const [tickets, setTickets] = useState(mockTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [formStep, setFormStep] = useState<"template" | "details">("template");
   const [formData, setFormData] = useState<NewTicketForm>({
     template: "",
@@ -216,8 +218,47 @@ const Tickets = () => {
   useDocumentTitle("Tickets");
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+
+    const fetchTickets = async () => {
+      setIsLoading(true);
+      const [{ data: userData }, ticketsResponse] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from("tickets").select("*").order("created_at", { ascending: false }),
+      ]);
+
+      if (!isMounted) return;
+
+      setCurrentUserId(userData?.user?.id ?? null);
+
+      if (ticketsResponse.error) {
+        toast.error("Failed to load tickets", { description: ticketsResponse.error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      const mappedTickets: Ticket[] = (ticketsResponse.data ?? []).map((ticket) => ({
+        id: ticket.ticket_code ?? ticket.id,
+        title: ticket.title,
+        category: ticket.category ?? "",
+        priority: ticket.priority,
+        status: ticket.status,
+        createdBy: ticket.created_by === userData?.user?.id ? "You" : (ticket.created_by ?? "User"),
+        assignedTo: ticket.assigned_to ? "Assigned" : "Unassigned",
+        createdAt: ticket.created_at,
+        lastUpdated: toRelativeTime(ticket.updated_at),
+        comments: ticket.comments_count ?? 0,
+      }));
+
+      setTickets(mappedTickets);
+      setIsLoading(false);
+    };
+
+    fetchTickets();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const filteredAndSortedTickets = useMemo(() => {
@@ -323,20 +364,41 @@ const Tickets = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    const ticketCode = `TKT-${Date.now()}`;
+    const { data, error } = await supabase
+      .from("tickets")
+      .insert({
+        ticket_code: ticketCode,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        category: formData.category,
+        priority: formData.severity as Ticket["priority"],
+        status: "open",
+        created_by: currentUserId,
+        assigned_to: null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Ticket creation failed", { description: error.message });
+      return;
+    }
+
     const newTicket: Ticket = {
-      id: `TKT-${String(tickets.length + 1).padStart(3, "0")}`,
-      title: formData.title.trim(),
-      category: formData.category,
-      priority: formData.severity as Ticket["priority"],
-      status: "open",
-      createdBy: formData.createdBy,
-      assignedTo: assignees.find(a => a.id === formData.assignedTo)?.name || "Unassigned",
-      createdAt: new Date().toISOString().split("T")[0],
+      id: data.ticket_code ?? data.id,
+      title: data.title,
+      category: data.category ?? "",
+      priority: data.priority,
+      status: data.status,
+      createdBy: currentUserId ? "You" : formData.createdBy,
+      assignedTo: "Unassigned",
+      createdAt: data.created_at,
       lastUpdated: "Just now",
-      comments: 0,
+      comments: data.comments_count ?? 0,
     };
 
     setTickets(prev => [newTicket, ...prev]);

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { RefreshCw, AlertTriangle, Check, Clock, CheckCircle2, XCircle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,8 +8,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { initialPermits, Permit } from "@/data/permits";
+import { Permit } from "@/data/permits";
 import { differenceInDays, format, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 const statusOptions = [
   { value: "pending", label: "Pending", className: "badge-pending", icon: Clock },
@@ -128,7 +130,49 @@ function MobileStatusUpdatePopover({ currentStatus, itemId, onStatusChange }: St
 }
 
 export function PendingItemsTable() {
-  const [permits, setPermits] = useState<Permit[]>(initialPermits);
+  const [permits, setPermits] = useState<Permit[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPermits = async () => {
+      const permitsTable = supabase.from("permits") as any;
+      const { data, error } = await permitsTable
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        toast.error("Failed to load pending items", { description: error.message });
+        return;
+      }
+
+      const mappedPermits: Permit[] = ((data ?? []) as Tables<"permits">[]).map((permit) => ({
+        id: permit.permit_code ?? permit.id,
+        dbId: permit.id,
+        permitCode: permit.permit_code ?? undefined,
+        guestName: permit.guest_name,
+        arrivalDate: permit.arrival_date,
+        departureDate: permit.departure_date,
+        nationality: permit.nationality ?? "",
+        passportNo: permit.passport_no ?? "",
+        status: permit.status,
+        uploaded: permit.uploaded,
+        lastUpdated: permit.last_updated_at ?? permit.updated_at,
+        updatedBy: "",
+        trackingHistory: [],
+      }));
+
+      setPermits(mappedPermits);
+    };
+
+    fetchPermits();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter permits: not uploaded and departure date within 7 days from today
   const pendingItems = useMemo(() => {
@@ -161,14 +205,31 @@ export function PendingItemsTable() {
       .sort((a, b) => a.daysUntilDeparture - b.daysUntilDeparture);
   }, [permits]);
 
-  const handleStatusChange = (id: string, newStatus: Permit["status"]) => {
+  const handleStatusChange = async (id: string, newStatus: Permit["status"]) => {
     const statusLabels = {
       pending: 'Pending',
       approved: 'Approved',
       rejected: 'Rejected',
       uploaded: 'Uploaded'
     };
-    
+
+    const targetPermit = permits.find(p => p.id === id);
+    const targetId = targetPermit?.dbId ?? targetPermit?.permitCode ?? id;
+    const targetColumn = targetPermit?.dbId ? "id" : "permit_code";
+    const permitsTable = supabase.from("permits") as any;
+    const { error } = await permitsTable
+      .update({
+        status: newStatus,
+        uploaded: newStatus === "uploaded",
+        last_updated_at: new Date().toISOString(),
+      })
+      .eq(targetColumn, targetId);
+
+    if (error) {
+      toast.error("Failed to update status", { description: error.message });
+      return;
+    }
+
     setPermits(prev => prev.map(permit => 
       permit.id === id ? { 
         ...permit, 
@@ -182,7 +243,7 @@ export function PendingItemsTable() {
         ]
       } : permit
     ));
-    
+
     toast.success(`Status updated to ${statusLabels[newStatus]}`);
   };
 

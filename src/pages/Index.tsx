@@ -13,6 +13,8 @@ import { PendingItemsTable } from "@/components/dashboard/PendingItemsTable";
 import { PermitBarChart, PermitPieChart } from "@/components/dashboard/PermitStatusChart";
 import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const container = {
   hidden: { opacity: 0 },
@@ -54,6 +56,19 @@ const getRandomMessage = () => {
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    totalThisWeek: 0,
+    pending: 0,
+    rejected: 0,
+    pendingUpdates: 0,
+    uploaded: 0,
+    uploadedThisWeek: 0,
+    approvedThisWeek: 0,
+    uploadRate: 0,
+    approvalRate: 0,
+    avgProcessingDays: null as number | null,
+  });
   const currentDate = new Date();
   const formattedDate = format(currentDate, "EEEE, MMMM d, yyyy");
   const greeting = getGreeting();
@@ -61,8 +76,71 @@ const Index = () => {
   useDocumentTitle("Dashboard");
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+
+    const fetchStats = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("permits")
+        .select("status, uploaded, created_at, last_updated_at")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        toast.error("Failed to load dashboard data", { description: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      const permits = data ?? [];
+      const now = new Date();
+      const weekAgo = new Date();
+      weekAgo.setDate(now.getDate() - 7);
+
+      const total = permits.length;
+      const pending = permits.filter(p => p.status === "pending").length;
+      const rejected = permits.filter(p => p.status === "rejected").length;
+      const uploaded = permits.filter(p => p.status === "uploaded" || p.uploaded).length;
+      const pendingUpdates = permits.filter(p => p.status === "approved" && !p.uploaded).length;
+      const totalThisWeek = permits.filter(p => new Date(p.created_at) >= weekAgo).length;
+      const uploadedThisWeek = permits.filter(p => (p.status === "uploaded" || p.uploaded) && new Date(p.created_at) >= weekAgo).length;
+      const approvedThisWeek = permits.filter(p => p.status === "approved" && new Date(p.created_at) >= weekAgo).length;
+
+      const uploadRate = total === 0 ? 0 : (uploaded / total) * 100;
+      const approvalRate = totalThisWeek === 0 ? 0 : (approvedThisWeek / totalThisWeek) * 100;
+
+      const uploadedPermits = permits.filter(p => p.status === "uploaded" && p.last_updated_at);
+      const avgProcessingDays = uploadedPermits.length === 0
+        ? null
+        : uploadedPermits.reduce((sum, p) => {
+            const createdAt = new Date(p.created_at).getTime();
+            const updatedAt = new Date(p.last_updated_at as string).getTime();
+            return sum + Math.max(0, updatedAt - createdAt);
+          }, 0) / uploadedPermits.length / (1000 * 60 * 60 * 24);
+
+      setStats({
+        total,
+        totalThisWeek,
+        pending,
+        rejected,
+        pendingUpdates,
+        uploaded,
+        uploadedThisWeek,
+        approvedThisWeek,
+        uploadRate,
+        approvalRate,
+        avgProcessingDays: avgProcessingDays !== null ? Number(avgProcessingDays.toFixed(1)) : null,
+      });
+
+      setIsLoading(false);
+    };
+
+    fetchStats();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (isLoading) {
@@ -100,9 +178,9 @@ const Index = () => {
                 <FileText className="w-4 h-4 text-primary" />
               </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight">216</p>
+            <p className="text-2xl font-bold tracking-tight">{stats.total}</p>
             <p className="text-xs text-muted-foreground mt-1">Total Applied</p>
-            <p className="text-xs text-primary font-medium mt-2">+12 this week</p>
+            <p className="text-xs text-primary font-medium mt-2">+{stats.totalThisWeek} this week</p>
           </div>
 
           <div className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors group">
@@ -111,7 +189,7 @@ const Index = () => {
                 <Clock className="w-4 h-4 text-warning" />
               </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight text-warning">45</p>
+            <p className="text-2xl font-bold tracking-tight text-warning">{stats.pending}</p>
             <p className="text-xs text-muted-foreground mt-1">Pending Approval</p>
           </div>
 
@@ -121,7 +199,7 @@ const Index = () => {
                 <XCircle className="w-4 h-4 text-danger" />
               </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight text-danger">13</p>
+            <p className="text-2xl font-bold tracking-tight text-danger">{stats.rejected}</p>
             <p className="text-xs text-muted-foreground mt-1">Rejected</p>
           </div>
 
@@ -131,7 +209,7 @@ const Index = () => {
                 <AlertTriangle className="w-4 h-4 text-warning" />
               </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight">28</p>
+            <p className="text-2xl font-bold tracking-tight">{stats.pendingUpdates}</p>
             <p className="text-xs text-muted-foreground mt-1">Pending Updates</p>
           </div>
 
@@ -141,9 +219,9 @@ const Index = () => {
                 <CheckCircle2 className="w-4 h-4 text-success" />
               </div>
             </div>
-            <p className="text-2xl font-bold tracking-tight text-success">130</p>
+            <p className="text-2xl font-bold tracking-tight text-success">{stats.uploaded}</p>
             <p className="text-xs text-muted-foreground mt-1">Uploaded</p>
-            <p className="text-xs text-success font-medium mt-2">+15 this week</p>
+            <p className="text-xs text-success font-medium mt-2">+{stats.uploadedThisWeek} this week</p>
           </div>
         </div>
       </motion.div>
@@ -172,7 +250,7 @@ const Index = () => {
             </div>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Upload Rate</p>
           </div>
-          <p className="text-3xl font-bold tracking-tight">94.2%</p>
+          <p className="text-3xl font-bold tracking-tight">{stats.uploadRate.toFixed(1)}%</p>
           <p className="text-xs text-muted-foreground mt-2">On-time uploads this month</p>
         </div>
 
@@ -183,7 +261,7 @@ const Index = () => {
             </div>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Approval Rate</p>
           </div>
-          <p className="text-3xl font-bold tracking-tight">87.5%</p>
+          <p className="text-3xl font-bold tracking-tight">{stats.approvalRate.toFixed(1)}%</p>
           <p className="text-xs text-muted-foreground mt-2">Permits approved this week</p>
         </div>
 
@@ -194,7 +272,12 @@ const Index = () => {
             </div>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Avg. Processing</p>
           </div>
-          <p className="text-3xl font-bold tracking-tight">2.3 <span className="text-lg font-medium text-muted-foreground">days</span></p>
+          <p className="text-3xl font-bold tracking-tight">
+            {stats.avgProcessingDays === null ? "—" : stats.avgProcessingDays}
+            {stats.avgProcessingDays !== null && (
+              <span className="text-lg font-medium text-muted-foreground"> days</span>
+            )}
+          </p>
           <p className="text-xs text-muted-foreground mt-2">From submission to upload</p>
         </div>
       </motion.div>

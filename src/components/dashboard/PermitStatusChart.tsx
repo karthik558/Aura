@@ -13,35 +13,18 @@ import {
   AreaChart,
   TooltipProps
 } from "recharts";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { subDays, format as formatDate } from "date-fns";
 
-const barData = [
-  { name: "Mon", pending: 12, approved: 8, rejected: 2, uploaded: 6 },
-  { name: "Tue", pending: 15, approved: 12, rejected: 3, uploaded: 10 },
-  { name: "Wed", pending: 8, approved: 15, rejected: 1, uploaded: 14 },
-  { name: "Thu", pending: 20, approved: 10, rejected: 4, uploaded: 8 },
-  { name: "Fri", pending: 14, approved: 18, rejected: 2, uploaded: 16 },
-  { name: "Sat", pending: 10, approved: 14, rejected: 1, uploaded: 12 },
-  { name: "Sun", pending: 6, approved: 8, rejected: 0, uploaded: 7 },
-];
-
-const pieData = [
-  { name: "Approved", value: 85, color: "hsl(var(--success))", percentage: 39 },
-  { name: "Pending", value: 45, color: "hsl(var(--warning))", percentage: 21 },
-  { name: "Uploaded", value: 73, color: "hsl(var(--primary))", percentage: 34 },
-  { name: "Rejected", value: 13, color: "hsl(var(--danger))", percentage: 6 },
-];
-
-const areaData = [
-  { name: "Week 1", value: 45 },
-  { name: "Week 2", value: 52 },
-  { name: "Week 3", value: 48 },
-  { name: "Week 4", value: 70 },
-  { name: "Week 5", value: 65 },
-  { name: "Week 6", value: 85 },
-];
+type PermitRecord = {
+  status: "pending" | "approved" | "rejected" | "uploaded";
+  created_at: string;
+};
 
 // Custom Tooltip Component for proper dark mode support
 const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
@@ -88,6 +71,57 @@ const CustomPieTooltip = ({ active, payload }: TooltipProps<number, string>) => 
 };
 
 export function PermitBarChart() {
+  const [permits, setPermits] = useState<PermitRecord[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPermits = async () => {
+      const { data, error } = await supabase
+        .from("permits")
+        .select("status, created_at")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        toast.error("Failed to load chart data", { description: error.message });
+        return;
+      }
+
+      setPermits((data ?? []) as PermitRecord[]);
+    };
+
+    fetchPermits();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const barData = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, idx) => subDays(new Date(), 6 - idx));
+    return days.map((day) => {
+      const key = formatDate(day, "EEE");
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayPermits = permits.filter((p) => {
+        const created = new Date(p.created_at);
+        return created >= dayStart && created <= dayEnd;
+      });
+
+      return {
+        name: key,
+        pending: dayPermits.filter(p => p.status === "pending").length,
+        approved: dayPermits.filter(p => p.status === "approved").length,
+        rejected: dayPermits.filter(p => p.status === "rejected").length,
+        uploaded: dayPermits.filter(p => p.status === "uploaded").length,
+      };
+    });
+  }, [permits]);
   return (
     <div className="bg-card rounded-2xl border border-border p-6 shadow-soft hover:shadow-medium transition-all duration-300 h-full flex flex-col">
       {/* Header */}
@@ -172,6 +206,49 @@ export function PermitBarChart() {
 }
 
 export function PermitPieChart() {
+  const [permits, setPermits] = useState<PermitRecord[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPermits = async () => {
+      const { data, error } = await supabase
+        .from("permits")
+        .select("status, created_at")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        toast.error("Failed to load chart data", { description: error.message });
+        return;
+      }
+
+      setPermits((data ?? []) as PermitRecord[]);
+    };
+
+    fetchPermits();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const pieData = useMemo(() => {
+    const total = permits.length || 1;
+    const approved = permits.filter(p => p.status === "approved").length;
+    const pending = permits.filter(p => p.status === "pending").length;
+    const uploaded = permits.filter(p => p.status === "uploaded").length;
+    const rejected = permits.filter(p => p.status === "rejected").length;
+
+    return [
+      { name: "Approved", value: approved, color: "hsl(var(--success))", percentage: Math.round((approved / total) * 100) },
+      { name: "Pending", value: pending, color: "hsl(var(--warning))", percentage: Math.round((pending / total) * 100) },
+      { name: "Uploaded", value: uploaded, color: "hsl(var(--primary))", percentage: Math.round((uploaded / total) * 100) },
+      { name: "Rejected", value: rejected, color: "hsl(var(--danger))", percentage: Math.round((rejected / total) * 100) },
+    ];
+  }, [permits]);
+
   const total = pieData.reduce((sum, item) => sum + item.value, 0);
 
   return (
@@ -247,6 +324,50 @@ export function PermitPieChart() {
 }
 
 export function TrendAreaChart() {
+  const [permits, setPermits] = useState<PermitRecord[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchPermits = async () => {
+      const { data, error } = await supabase
+        .from("permits")
+        .select("status, created_at")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        toast.error("Failed to load chart data", { description: error.message });
+        return;
+      }
+
+      setPermits((data ?? []) as PermitRecord[]);
+    };
+
+    fetchPermits();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const areaData = useMemo(() => {
+    const weeks = Array.from({ length: 6 }, (_, idx) => {
+      const end = subDays(new Date(), idx * 7);
+      const start = subDays(new Date(), idx * 7 + 6);
+      return { start, end, label: `Week ${6 - idx}` };
+    }).reverse();
+
+    return weeks.map((week) => {
+      const count = permits.filter((p) => {
+        const created = new Date(p.created_at);
+        return created >= week.start && created <= week.end;
+      }).length;
+      return { name: week.label, value: count };
+    });
+  }, [permits]);
+
   return (
     <div className="bg-card rounded-2xl border border-border p-6 shadow-soft">
       {/* Header */}

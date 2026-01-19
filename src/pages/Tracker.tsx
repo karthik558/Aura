@@ -43,6 +43,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -61,7 +68,9 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { cn } from "@/lib/utils";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { toast } from "sonner";
-import { initialPermits, Permit, statusConfig } from "@/data/permits";
+import { Permit, statusConfig } from "@/data/permits";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 const statusConfigWithIcons = {
   pending: { ...statusConfig.pending, icon: Clock },
@@ -75,10 +84,12 @@ type SortDirection = "asc" | "desc";
 
 const Tracker = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [permits, setPermits] = useState<Permit[]>(initialPermits);
+  const [permits, setPermits] = useState<Permit[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [isAddPermitOpen, setIsAddPermitOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [sortField, setSortField] = useState<SortField>("arrivalDate");
@@ -86,13 +97,131 @@ const Tracker = () => {
   const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
   const [detailViewPermit, setDetailViewPermit] = useState<Permit | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [newPermit, setNewPermit] = useState({
+    permitCode: "",
+    guestName: "",
+    arrivalDate: "",
+    departureDate: "",
+    nationality: "",
+    passportNo: "",
+    status: "pending" as Permit["status"],
+  });
   
   useDocumentTitle("Tracker");
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+
+    const fetchPermits = async () => {
+      setIsLoading(true);
+      const permitsTable = supabase.from("permits") as any;
+      const [{ data: userData }, permitsResponse] = await Promise.all([
+        supabase.auth.getUser(),
+        permitsTable.select("*").order("created_at", { ascending: false }),
+      ]);
+
+      if (!isMounted) return;
+
+      setCurrentUserId(userData?.user?.id ?? null);
+
+      if (permitsResponse.error) {
+        toast.error("Failed to load permits", { description: permitsResponse.error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      const mappedPermits: Permit[] = ((permitsResponse.data ?? []) as Tables<"permits">[]).map((permit) => ({
+        id: permit.permit_code ?? permit.id,
+        dbId: permit.id,
+        permitCode: permit.permit_code ?? undefined,
+        guestName: permit.guest_name,
+        arrivalDate: permit.arrival_date,
+        departureDate: permit.departure_date,
+        nationality: permit.nationality ?? "",
+        passportNo: permit.passport_no ?? "",
+        status: permit.status,
+        uploaded: permit.uploaded,
+        lastUpdated: permit.last_updated_at ?? permit.updated_at,
+        updatedBy: "",
+        trackingHistory: [],
+      }));
+
+      setPermits(mappedPermits);
+      setIsLoading(false);
+    };
+
+    fetchPermits();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const handleCreatePermit = async () => {
+    if (!newPermit.guestName || !newPermit.arrivalDate || !newPermit.departureDate) {
+      toast.error("Please fill required fields");
+      return;
+    }
+
+    const permitCode = newPermit.permitCode || `PRM-${Date.now()}`;
+
+    const permitsTable = supabase.from("permits") as any;
+    const { data, error } = await permitsTable
+      .insert({
+        permit_code: permitCode,
+        guest_name: newPermit.guestName,
+        arrival_date: newPermit.arrivalDate,
+        departure_date: newPermit.departureDate,
+        nationality: newPermit.nationality,
+        passport_no: newPermit.passportNo,
+        status: newPermit.status,
+        uploaded: newPermit.status === "uploaded",
+        created_by: currentUserId,
+        updated_by: currentUserId,
+        last_updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to create permit", { description: error.message });
+      return;
+    }
+
+    if (!data) {
+      toast.error("Failed to create permit", { description: "No data returned." });
+      return;
+    }
+
+    const createdPermit: Permit = {
+      id: data.permit_code ?? data.id,
+      dbId: data.id,
+      permitCode: data.permit_code ?? undefined,
+      guestName: data.guest_name,
+      arrivalDate: data.arrival_date,
+      departureDate: data.departure_date,
+      nationality: data.nationality ?? "",
+      passportNo: data.passport_no ?? "",
+      status: data.status,
+      uploaded: data.uploaded,
+      lastUpdated: data.last_updated_at ?? data.updated_at,
+      updatedBy: "",
+      trackingHistory: [],
+    };
+
+    setPermits(prev => [createdPermit, ...prev]);
+    setIsAddPermitOpen(false);
+    setNewPermit({
+      permitCode: "",
+      guestName: "",
+      arrivalDate: "",
+      departureDate: "",
+      nationality: "",
+      passportNo: "",
+      status: "pending",
+    });
+    toast.success("Permit created");
+  };
 
   const handleImportComplete = (importedData: Permit[]) => {
     setPermits(prev => [...importedData, ...prev]);
@@ -123,19 +252,59 @@ const Tracker = () => {
     }
   };
 
-  const handlePermitSave = (updatedPermit: Permit) => {
+  const handlePermitSave = async (updatedPermit: Permit) => {
+    const targetId = updatedPermit.dbId ?? updatedPermit.permitCode ?? updatedPermit.id;
+    const permitsTable = supabase.from("permits") as any;
+    const { error } = await permitsTable
+      .update({
+        guest_name: updatedPermit.guestName,
+        arrival_date: updatedPermit.arrivalDate,
+        departure_date: updatedPermit.departureDate,
+        nationality: updatedPermit.nationality,
+        passport_no: updatedPermit.passportNo,
+        status: updatedPermit.status,
+        uploaded: updatedPermit.uploaded,
+        last_updated_at: new Date().toISOString(),
+      })
+      .eq(updatedPermit.dbId ? "id" : "permit_code", targetId)
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to update permit", { description: error.message });
+      return;
+    }
+
     setPermits(prev => prev.map(p => p.id === updatedPermit.id ? updatedPermit : p));
     setDetailViewPermit(updatedPermit);
   };
 
-  const handleStatusUpdate = (permitId: string, newStatus: Permit['status']) => {
+  const handleStatusUpdate = async (permitId: string, newStatus: Permit['status']) => {
     const statusLabels = {
       pending: 'Pending',
       approved: 'Approved',
       rejected: 'Rejected',
       uploaded: 'Uploaded'
     };
-    
+
+    const nowIso = new Date().toISOString();
+    const targetPermit = permits.find(p => p.id === permitId);
+    const targetId = targetPermit?.dbId ?? targetPermit?.permitCode ?? permitId;
+    const targetColumn = targetPermit?.dbId ? "id" : "permit_code";
+    const permitsTable = supabase.from("permits") as any;
+    const { error } = await permitsTable
+      .update({
+        status: newStatus,
+        uploaded: newStatus === 'uploaded',
+        last_updated_at: nowIso,
+      })
+      .eq(targetColumn, targetId);
+
+    if (error) {
+      toast.error("Failed to update status", { description: error.message });
+      return;
+    }
+
     setPermits(prev => prev.map(p => {
       if (p.id === permitId) {
         return {
@@ -152,7 +321,7 @@ const Tracker = () => {
       }
       return p;
     }));
-    
+
     toast.success(`Status updated to ${statusLabels[newStatus]}`);
   };
 
@@ -267,12 +436,99 @@ const Tracker = () => {
             <FileUp className="w-4 h-4" />
             <span className="hidden sm:inline">Bulk Import</span>
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setIsAddPermitOpen(true)}>
             <Plus className="w-4 h-4" />
             Add Permit
           </Button>
         </div>
       </div>
+
+      <Dialog open={isAddPermitOpen} onOpenChange={setIsAddPermitOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Permit</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="permitCode">Permit Code</Label>
+              <Input
+                id="permitCode"
+                value={newPermit.permitCode}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, permitCode: e.target.value }))}
+                placeholder="PRM-001"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="guestName">Guest Name *</Label>
+              <Input
+                id="guestName"
+                value={newPermit.guestName}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, guestName: e.target.value }))}
+                placeholder="Guest name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="arrivalDate">Arrival Date *</Label>
+              <Input
+                id="arrivalDate"
+                type="date"
+                value={newPermit.arrivalDate}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, arrivalDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="departureDate">Departure Date *</Label>
+              <Input
+                id="departureDate"
+                type="date"
+                value={newPermit.departureDate}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, departureDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="nationality">Nationality</Label>
+              <Input
+                id="nationality"
+                value={newPermit.nationality}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, nationality: e.target.value }))}
+                placeholder="Country"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="passportNo">Passport No</Label>
+              <Input
+                id="passportNo"
+                value={newPermit.passportNo}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, passportNo: e.target.value }))}
+                placeholder="Passport"
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Status</Label>
+              <Select
+                value={newPermit.status}
+                onValueChange={(value) => setNewPermit(prev => ({ ...prev, status: value as Permit["status"] }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="uploaded">Uploaded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsAddPermitOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePermit}>Create</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Overview */}
       <motion.div 

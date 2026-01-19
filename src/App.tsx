@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LayoutSettingsProvider } from "@/hooks/useLayoutSettings";
 import { Preloader } from "@/components/Preloader";
@@ -19,10 +20,44 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(data.session));
+      setSessionLoaded(true);
+    };
+
+    initSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(Boolean(session));
+      setSessionLoaded(true);
+    });
+
+    return () => {
+      isMounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const RequireAuth = ({ children }: { children: JSX.Element }) => {
+    if (!sessionLoaded) return null;
+    if (!isAuthenticated) return <Navigate to="/auth" replace />;
+    return children;
+  };
+
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <LayoutSettingsProvider>
@@ -32,8 +67,17 @@ const App = () => (
           <Preloader />
           <BrowserRouter>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route element={<AppLayout />}>
+              <Route
+                path="/auth"
+                element={isAuthenticated ? <Navigate to="/" replace /> : <Auth />}
+              />
+              <Route
+                element={
+                  <RequireAuth>
+                    <AppLayout />
+                  </RequireAuth>
+                }
+              >
                 <Route path="/" element={<Index />} />
                 <Route path="/tracker" element={<Tracker />} />
                 <Route path="/reports" element={<Reports />} />
@@ -52,6 +96,7 @@ const App = () => (
       </LayoutSettingsProvider>
     </ThemeProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

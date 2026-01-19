@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { 
   Plus, 
@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { AddUserDialog } from "@/components/users/AddUserDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const container = {
   hidden: { opacity: 0 },
@@ -52,14 +53,12 @@ interface UserData {
   avatar: string;
 }
 
-const mockUsers: UserData[] = [
-  { id: "USR-001", name: "John Doe", email: "john.doe@hotel.com", role: "admin", department: "Management", status: "active", lastLogin: "Today, 09:30 AM", avatar: "JD" },
-  { id: "USR-002", name: "Jane Smith", email: "jane.smith@hotel.com", role: "manager", department: "Front Desk", status: "active", lastLogin: "Today, 08:15 AM", avatar: "JS" },
-  { id: "USR-003", name: "Mike Johnson", email: "mike.j@hotel.com", role: "staff", department: "Front Desk", status: "active", lastLogin: "Yesterday", avatar: "MJ" },
-  { id: "USR-004", name: "Sarah Williams", email: "sarah.w@hotel.com", role: "staff", department: "Concierge", status: "active", lastLogin: "Today, 07:45 AM", avatar: "SW" },
-  { id: "USR-005", name: "Robert Chen", email: "robert.c@hotel.com", role: "viewer", department: "Accounting", status: "inactive", lastLogin: "5 days ago", avatar: "RC" },
-  { id: "USR-006", name: "Emily Brown", email: "emily.b@hotel.com", role: "staff", department: "Front Desk", status: "active", lastLogin: "Today, 10:00 AM", avatar: "EB" },
-];
+const getInitials = (name: string) => {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
 
 const roleConfig = {
   admin: { label: "Admin", icon: ShieldCheck, className: "bg-danger/10 text-danger" },
@@ -93,22 +92,49 @@ const Users = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [users, setUsers] = useState<UserData[]>([]);
   
   useDocumentTitle("Users");
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to load users", error);
+      setIsLoading(false);
+      return;
+    }
+
+    const mappedUsers: UserData[] = (data ?? []).map((user) => ({
+      id: user.user_code ?? user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department ?? "",
+      status: user.status,
+      lastLogin: user.last_login_at ?? "",
+      avatar: user.avatar ?? getInitials(user.name),
+    }));
+
+    setUsers(mappedUsers);
+    setIsLoading(false);
   }, []);
 
-  const filteredUsers = mockUsers.filter(user =>
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleUserAdded = (userData: any) => {
-    // In a real app, this would make an API call to create the user
-    console.log("New user created:", userData);
+  const handleUserAdded = () => {
+    fetchUsers();
   };
 
   if (isLoading) return <UsersSkeleton />;
@@ -138,7 +164,7 @@ const Users = () => {
       {/* Role Stats */}
       <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {Object.entries(roleConfig).map(([role, config]) => {
-          const count = mockUsers.filter(u => u.role === role).length;
+          const count = users.filter(u => u.role === role).length;
           return (
             <div key={role} className="bg-card rounded-xl border border-border p-4">
               <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-3", config.className)}>

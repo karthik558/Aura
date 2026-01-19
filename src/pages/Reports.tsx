@@ -16,6 +16,9 @@ import { PermitBarChart, PermitPieChart } from "@/components/dashboard/PermitSta
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/types";
 
 const container = {
   hidden: { opacity: 0 },
@@ -59,12 +62,126 @@ function ReportsSkeleton() {
 
 const Reports = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [summaryRows, setSummaryRows] = useState<Array<{
+    metric: string;
+    current: string;
+    previous: string;
+    change: string;
+    positive: boolean;
+  }>>([]);
   
   useDocumentTitle("Reports");
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+
+    const fetchSummary = async () => {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("permits")
+        .select("status, uploaded, created_at, last_updated_at")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        toast.error("Failed to load report data", { description: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      const permits = (data ?? []) as Tables<"permits">[];
+      const now = new Date();
+      const thisWeekStart = new Date();
+      thisWeekStart.setDate(now.getDate() - 7);
+      const lastWeekStart = new Date();
+      lastWeekStart.setDate(now.getDate() - 14);
+
+      const within = (d: string, start: Date, end: Date) => {
+        const date = new Date(d);
+        return date >= start && date <= end;
+      };
+
+      const currentWeek = permits.filter(p => within(p.created_at, thisWeekStart, now));
+      const lastWeek = permits.filter(p => within(p.created_at, lastWeekStart, thisWeekStart));
+
+      const countBy = (list: typeof permits, status: string) => list.filter(p => p.status === status).length;
+      const uploadedCount = (list: typeof permits) => list.filter(p => p.status === "uploaded" || p.uploaded).length;
+
+      const formatChange = (current: number, previous: number) => {
+        if (previous === 0) {
+          return current === 0 ? "0%" : "+100%";
+        }
+        const diff = ((current - previous) / previous) * 100;
+        const sign = diff >= 0 ? "+" : "";
+        return `${sign}${diff.toFixed(1)}%`;
+      };
+
+      const avgProcessingDays = (list: typeof permits) => {
+        const uploaded = list.filter(p => p.status === "uploaded" && p.last_updated_at);
+        if (uploaded.length === 0) return null;
+        const totalDays = uploaded.reduce((sum, p) => {
+          const created = new Date(p.created_at).getTime();
+          const updated = new Date(p.last_updated_at as string).getTime();
+          return sum + Math.max(0, updated - created);
+        }, 0) / (1000 * 60 * 60 * 24);
+        return Number((totalDays / uploaded.length).toFixed(1));
+      };
+
+      const rows = [
+        {
+          metric: "Total Permits",
+          current: String(currentWeek.length),
+          previous: String(lastWeek.length),
+          change: formatChange(currentWeek.length, lastWeek.length),
+          positive: currentWeek.length >= lastWeek.length,
+        },
+        {
+          metric: "Approved",
+          current: String(countBy(currentWeek, "approved")),
+          previous: String(countBy(lastWeek, "approved")),
+          change: formatChange(countBy(currentWeek, "approved"), countBy(lastWeek, "approved")),
+          positive: countBy(currentWeek, "approved") >= countBy(lastWeek, "approved"),
+        },
+        {
+          metric: "Pending",
+          current: String(countBy(currentWeek, "pending")),
+          previous: String(countBy(lastWeek, "pending")),
+          change: formatChange(countBy(currentWeek, "pending"), countBy(lastWeek, "pending")),
+          positive: countBy(currentWeek, "pending") <= countBy(lastWeek, "pending"),
+        },
+        {
+          metric: "Rejected",
+          current: String(countBy(currentWeek, "rejected")),
+          previous: String(countBy(lastWeek, "rejected")),
+          change: formatChange(countBy(currentWeek, "rejected"), countBy(lastWeek, "rejected")),
+          positive: countBy(currentWeek, "rejected") <= countBy(lastWeek, "rejected"),
+        },
+        {
+          metric: "Uploaded to Portal",
+          current: String(uploadedCount(currentWeek)),
+          previous: String(uploadedCount(lastWeek)),
+          change: formatChange(uploadedCount(currentWeek), uploadedCount(lastWeek)),
+          positive: uploadedCount(currentWeek) >= uploadedCount(lastWeek),
+        },
+        {
+          metric: "Avg. Processing Time",
+          current: avgProcessingDays(currentWeek) === null ? "—" : `${avgProcessingDays(currentWeek)} days`,
+          previous: avgProcessingDays(lastWeek) === null ? "—" : `${avgProcessingDays(lastWeek)} days`,
+          change: "—",
+          positive: true,
+        },
+      ];
+
+      setSummaryRows(rows);
+      setIsLoading(false);
+    };
+
+    fetchSummary();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (isLoading) return <ReportsSkeleton />;
@@ -142,14 +259,7 @@ const Reports = () => {
               </tr>
             </thead>
             <tbody>
-              {[
-                { metric: "Total Permits", current: "216", previous: "198", change: "+9.1%", positive: true },
-                { metric: "Approved", current: "185", previous: "172", change: "+7.6%", positive: true },
-                { metric: "Pending", current: "45", previous: "38", change: "+18.4%", positive: false },
-                { metric: "Rejected", current: "13", previous: "15", change: "-13.3%", positive: true },
-                { metric: "Uploaded to Portal", current: "130", previous: "112", change: "+16.1%", positive: true },
-                { metric: "Avg. Processing Time", current: "2.3 days", previous: "2.8 days", change: "-17.9%", positive: true },
-              ].map((row) => (
+              {summaryRows.map((row) => (
                 <tr key={row.metric}>
                   <td className="font-medium">{row.metric}</td>
                   <td className="text-right">{row.current}</td>

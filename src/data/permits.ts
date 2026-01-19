@@ -2,6 +2,8 @@ import { format, addDays } from "date-fns";
 
 export interface Permit {
   id: string;
+  dbId?: string;
+  permitCode?: string;
   guestName: string;
   arrivalDate: string;
   departureDate: string;
