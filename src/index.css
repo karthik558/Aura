@@ -1,0 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 14% 10%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 220 14% 10%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 14% 10%;
+    
+    /* Primary: Forest Green */
+    --primary: 152 45% 28%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 210 15% 95%;
+    --secondary-foreground: 220 14% 10%;
+    
+    --muted: 210 15% 95%;
+    --muted-foreground: 220 10% 46%;
+    
+    --accent: 210 15% 93%;
+    --accent-foreground: 220 14% 10%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 152 45% 28%;
+
+    /* Semantic colors */
+    --success: 152 45% 28%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 10%;
+    
+    --danger: 0 72% 51%;
+    --danger-foreground: 0 0% 100%;
+    
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar */
+    --sidebar: 0 0% 100%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 14% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-accent: 210 15% 96%;
+    --sidebar-accent-foreground: 220 14% 10%;
+    --sidebar-muted: 220 10% 46%;
+    --sidebar-primary: 152 45% 28%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 152 45% 28%;
+
+    /* Chart colors */
+    --chart-1: 152 45% 28%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 217 91% 60%;
+    --chart-5: 280 65% 60%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    /* Background: Clean slate dark */
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+    
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 96%;
+    
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+    
+    --primary: 152 55% 48%;
+    --primary-foreground: 222 47% 8%;
+    
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 210 40% 96%;
+    
+    --muted: 222 30% 14%;
+    --muted-foreground: 215 20% 55%;
+    
+    --accent: 222 30% 16%;
+    --accent-foreground: 210 40% 96%;
+    
+    --destructive: 0 62% 55%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 222 30% 16%;
+    --input: 222 30% 16%;
+    --ring: 152 55% 48%;
+
+    --success: 152 55% 48%;
+    --success-foreground: 222 47% 8%;
+    
+    --warning: 43 96% 56%;
+    --warning-foreground: 43 96% 10%;
+    
+    --danger: 0 62% 55%;
+    --danger-foreground: 0 0% 100%;
+    
+    --info: 217 91% 65%;
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar - Slightly darker than background */
+    --sidebar: 222 47% 6%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-border: 222 30% 14%;
+    --sidebar-accent: 222 30% 12%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-muted: 215 20% 55%;
+    --sidebar-primary: 152 55% 48%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-ring: 152 55% 48%;
+
+    /* Chart colors - brighter for dark mode */
+    --chart-1: 152 55% 48%;
+    --chart-2: 173 65% 50%;
+    --chart-3: 43 96% 56%;
+    --chart-4: 217 91% 70%;
+    --chart-5: 280 70% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Improved scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@layer components {
+  /* Navigation items */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200;
+  }
+  
+  .nav-item:hover {
+    @apply bg-accent text-foreground;
+  }
+  
+  .nav-item-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  /* Card styles */
+  .stat-card {
+    @apply relative bg-card rounded-xl border border-border p-5 transition-all duration-200 hover:shadow-soft;
+  }
+
+  /* Data table */
+  .data-table {
+    @apply w-full;
+  }
+  
+  .data-table th {
+    @apply text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4 bg-muted/30 first:rounded-tl-lg last:rounded-tr-lg;
+  }
+  
+  .data-table td {
+    @apply py-3.5 px-4 text-sm border-t border-border/50;
+  }
+  
+  .data-table tbody tr {
+    @apply transition-colors;
+  }
+
+  .data-table tbody tr:hover td {
+    @apply bg-muted/20;
+  }
+
+  /* Status badges */
+  .badge-pending {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-warning/15 text-warning border border-warning/20;
+  }
+  
+  .badge-approved {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-success/15 text-success border border-success/20;
+  }
+  
+  .badge-rejected {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-danger/15 text-danger border border-danger/20;
+  }
+  
+  .badge-uploaded {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary border border-primary/20;
+  }
+
+  /* Logo accent */
+  .logo-accent {
+    filter: invert(28%) sepia(15%) saturate(1500%) hue-rotate(110deg) brightness(92%) contrast(88%);
+  }
+  
+  .dark .logo-accent {
+    filter: invert(55%) sepia(20%) saturate(1000%) hue-rotate(110deg) brightness(95%) contrast(90%);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Focus ring */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out forwards;
+  }
+  
+  .animate-slide-in {
+    animation: slide-in-right 0.4s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out forwards;
+  }
+  
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent, hsl(var(--muted) / 0.4), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70;
+  }
+
+  /* Safe area padding for mobile */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
