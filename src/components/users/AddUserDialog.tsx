@@ -126,6 +126,8 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     pageAccess: defaultPageAccess,
     permissions: defaultPermissions,
   });
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const updateFormData = (field: keyof UserFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -230,6 +232,100 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       });
       return;
     }
+    if (password || confirmPassword) {
+      if (password.length < 8) {
+        toast({
+          title: "Weak Password",
+          description: "Password must be at least 8 characters.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast({
+          title: "Password Mismatch",
+          description: "Passwords do not match.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const { data: currentUserData } = await supabase.auth.getUser();
+    if (!currentUserData.user) {
+      toast({
+        title: "Not authenticated",
+        description: "Please sign in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const usersTable = supabase.from("users") as any;
+    let currentProfile = null as null | { id: string; role: string | null };
+    const { data: currentProfileData, error: currentProfileError } = await usersTable
+      .select("id, role")
+      .eq("auth_user_id", currentUserData.user.id)
+      .maybeSingle();
+
+    if (currentProfileError) {
+      toast({
+        title: "Profile lookup failed",
+        description: currentProfileError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentProfileData) {
+      const displayName =
+        (currentUserData.user.user_metadata?.full_name as string | undefined) ??
+        currentUserData.user.email?.split("@")[0] ??
+        "Admin";
+
+      const { data: createdProfile, error: createProfileError } = await usersTable
+        .upsert({
+          auth_user_id: currentUserData.user.id,
+          name: displayName,
+          email: currentUserData.user.email,
+          role: "admin",
+          status: "active",
+        })
+        .select("id, role")
+        .single();
+
+      if (createProfileError || !createdProfile) {
+        toast({
+          title: "Profile setup failed",
+          description: createProfileError?.message ?? "Unable to create profile.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      currentProfile = createdProfile;
+    } else {
+      currentProfile = currentProfileData;
+    }
+
+    if (currentProfile.role !== "admin") {
+      const { data: promotedProfile, error: promoteError } = await usersTable
+        .update({ role: "admin" })
+        .eq("auth_user_id", currentUserData.user.id)
+        .select("id, role")
+        .single();
+
+      if (promoteError || !promotedProfile) {
+        toast({
+          title: "Admin access required",
+          description: "Unable to promote your account to admin. Update your role in the users table.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      currentProfile = promotedProfile;
+    }
 
     const userCode = `USR-${Date.now()}`;
     const avatar = formData.name
@@ -240,9 +336,65 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       .join("")
       .toUpperCase();
 
-    const usersTable = supabase.from("users") as any;
+    let targetAuthUserId: string | null = null;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentSession = sessionData.session ?? null;
+
+    if (password) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password,
+        options: {
+          data: { full_name: formData.name },
+        },
+      });
+
+      if (signUpError) {
+        toast({
+          title: "Auth user creation failed",
+          description: signUpError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      targetAuthUserId = signUpData.user?.id ?? null;
+
+      if (currentSession?.access_token && currentSession?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: currentSession.access_token,
+          refresh_token: currentSession.refresh_token,
+        });
+      }
+    } else {
+      const { data: existingUser, error: existingError } = await usersTable
+        .select("id, auth_user_id")
+        .eq("email", formData.email)
+        .maybeSingle();
+
+      if (existingError || !existingUser || !existingUser.auth_user_id) {
+        toast({
+          title: "Password required",
+          description: "Enter a password to create the Auth user, or create the Auth user first in Supabase.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      targetAuthUserId = existingUser.auth_user_id;
+    }
+
+    if (!targetAuthUserId) {
+      toast({
+        title: "User creation incomplete",
+        description: "Missing Auth user id.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { data: userRow, error: profileError } = await usersTable
-      .upsert({
+      .update({
         name: formData.name,
         email: formData.email,
         role: formData.role || "user",
@@ -251,19 +403,20 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         user_code: userCode,
         avatar,
       })
+      .eq("auth_user_id", targetAuthUserId)
       .select()
       .single();
 
     if (profileError || !userRow) {
       toast({
         title: "Profile update failed",
-        description: profileError?.message ?? "Unable to create profile.",
+        description: profileError?.message ?? "Unable to update profile.",
         variant: "destructive",
       });
       return;
     }
 
-    const targetUserId = userRow?.auth_user_id ?? userRow?.id;
+    const targetUserId = userRow?.auth_user_id ?? targetAuthUserId;
 
     if (!targetUserId) {
       toast({
@@ -293,7 +446,13 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     const { error: permissionsError } = await userPermissionsTable
       .upsert({
         user_id: targetUserId,
-        ...formData.permissions,
+        can_export_data: formData.permissions.canExportData,
+        can_import_data: formData.permissions.canImportData,
+        can_manage_users: formData.permissions.canManageUsers,
+        can_view_reports: formData.permissions.canViewReports,
+        can_manage_settings: formData.permissions.canManageSettings,
+        can_approve_requests: formData.permissions.canApproveRequests,
+        can_bulk_operations: formData.permissions.canBulkOperations,
       });
 
     if (permissionsError) {
@@ -344,6 +503,8 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       pageAccess: defaultPageAccess,
       permissions: defaultPermissions,
     });
+    setPassword("");
+    setConfirmPassword("");
   };
 
   const getActivePermissionsCount = () => {
@@ -426,6 +587,38 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="password" className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-muted-foreground" />
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Set a temporary password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-muted-foreground" />
+                Confirm Password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Re-enter password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank if the Auth user already exists.
+              </p>
             </div>
           </div>
 

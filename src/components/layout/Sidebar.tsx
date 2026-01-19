@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/components/ThemeProvider";
+import { supabase } from "@/integrations/supabase/client";
 import auraLogo from "@/assets/aura-logo.png";
 import {
   Tooltip,
@@ -84,8 +85,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [notifications, setNotifications] = useState(mockNotifications);
   const [notificationOpen, setNotificationOpen] = useState(false);
 
-  const handleLogout = () => {
-    navigate("/auth");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth", { replace: true });
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
