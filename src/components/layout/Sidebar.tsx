@@ -119,12 +119,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     .toUpperCase();
 
   const visibleMainNavItems = useMemo(() => {
-    if (loading || isAdmin) return mainNavItems;
+    if (loading) return [];
+    if (isAdmin) return mainNavItems;
     return mainNavItems.filter((item) => canViewPage(item.pageId));
   }, [loading, isAdmin, canViewPage]);
 
   const visibleSystemNavItems = useMemo(() => {
-    if (loading || isAdmin) return systemNavItems;
+    if (loading) return [];
+    if (isAdmin) return systemNavItems;
     return systemNavItems.filter((item) => canViewPage(item.pageId));
   }, [loading, isAdmin, canViewPage]);
 

@@ -93,9 +93,11 @@ export function TopNav({ stickyHeader }: TopNavProps) {
     .join("")
     .toUpperCase();
 
-  const visibleNavItems = (loading || isAdmin)
-    ? navItems
-    : navItems.filter((item) => canViewPage(item.pageId));
+  const visibleNavItems = loading
+    ? []
+    : (isAdmin
+        ? navItems
+        : navItems.filter((item) => canViewPage(item.pageId)));
 
   return (
     <header 

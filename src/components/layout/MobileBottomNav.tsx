@@ -22,9 +22,11 @@ export function MobileBottomNav() {
   const location = useLocation();
   const { loading, isAdmin, canViewPage } = useUserAccess();
 
-  const visibleNavItems = (loading || isAdmin)
-    ? navItems
-    : navItems.filter((item) => canViewPage(item.pageId));
+  const visibleNavItems = loading
+    ? []
+    : (isAdmin
+        ? navItems
+        : navItems.filter((item) => canViewPage(item.pageId)));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
