@@ -19,6 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +40,9 @@ import { useLayoutSettings } from "@/hooks/useLayoutSettings";
 import { cn } from "@/lib/utils";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { supabase } from "@/integrations/supabase/client";
+import { setMyPassword } from "@/integrations/supabase/rpc";
+import { toast } from "sonner";
 
 const container = {
   hidden: { opacity: 0 },
@@ -78,6 +87,44 @@ const Settings = () => {
   const [sidebarStyle, setSidebarStyle] = useState("default");
   const [fontSize, setFontSize] = useState("medium");
   const [compactMode, setCompactMode] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!newPassword || newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    setIsPasswordSaving(true);
+
+    const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+    if (authError) {
+      toast.error("Failed to update Auth password", { description: authError.message });
+      setIsPasswordSaving(false);
+      return;
+    }
+
+    const { error: dbError } = await setMyPassword(newPassword);
+    if (dbError) {
+      toast.error("Failed to update database password hash", { description: dbError.message });
+      setIsPasswordSaving(false);
+      return;
+    }
+
+    toast.success("Password updated");
+    setIsPasswordSaving(false);
+    setIsChangePasswordOpen(false);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
   
   useDocumentTitle("Settings");
 
@@ -405,7 +452,11 @@ const Settings = () => {
                 Password & Recovery
               </div>
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => setIsChangePasswordOpen(true)}
+                >
                   Change Password
                 </Button>
                 <Button variant="outline" className="w-full justify-start">
@@ -427,6 +478,47 @@ const Settings = () => {
           Save Changes
         </Button>
       </motion.div>
+
+      <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="settingsNewPassword">New Password</Label>
+              <Input
+                id="settingsNewPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="settingsConfirmPassword">Confirm Password</Label>
+              <Input
+                id="settingsConfirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsChangePasswordOpen(false)}
+                disabled={isPasswordSaving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleChangePassword} disabled={isPasswordSaving}>
+                {isPasswordSaving ? "Updating..." : "Update Password"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

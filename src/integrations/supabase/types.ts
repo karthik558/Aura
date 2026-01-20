@@ -21,6 +21,7 @@ export type Database = {
           user_code: string | null
           name: string
           email: string
+          password_hash: string | null
           role: Database["public"]["Enums"]["user_role"]
           department: string | null
           status: Database["public"]["Enums"]["user_status"]
@@ -35,6 +36,7 @@ export type Database = {
           user_code?: string | null
           name: string
           email: string
+          password_hash?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           department?: string | null
           status?: Database["public"]["Enums"]["user_status"]
@@ -49,6 +51,7 @@ export type Database = {
           user_code?: string | null
           name?: string
           email?: string
+          password_hash?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           department?: string | null
           status?: Database["public"]["Enums"]["user_status"]
@@ -434,7 +437,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      set_user_password: {
+        Args: {
+          p_auth_user_id: string
+          p_password: string
+        }
+        Returns: void
+      }
+      set_my_password: {
+        Args: {
+          p_password: string
+        }
+        Returns: void
+      }
+      admin_reset_user_password: {
+        Args: {
+          p_auth_user_id: string
+          p_password: string
+        }
+        Returns: void
+      }
     }
     Enums: {
       user_role: "admin" | "manager" | "staff" | "viewer" | "analyst" | "user"

@@ -37,6 +37,10 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { setUserPassword } from "@/integrations/supabase/rpc";
+import type { PostgrestError } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 interface AddUserDialogProps {
   open: boolean;
@@ -117,6 +121,7 @@ const defaultPermissions: Permissions = {
 };
 
 export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialogProps) {
+  const sb = supabase as SupabaseClient<Database, "public">;
   const { toast } = useToast();
   const [formData, setFormData] = useState<UserFormData>({
     name: "",
@@ -128,8 +133,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
   });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updateFormData = (field: keyof UserFormData, value: any) => {
+  const updateFormData = <K extends keyof UserFormData>(field: K, value: UserFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -216,40 +222,46 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.department || !formData.role) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (password || confirmPassword) {
-      if (password.length < 8) {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    try {
+      if (!formData.name || !formData.email || !formData.department || !formData.role) {
         toast({
-          title: "Weak Password",
-          description: "Password must be at least 8 characters.",
+          title: "Missing Information",
+          description: "Please fill in all required fields.",
           variant: "destructive",
         });
         return;
       }
-      if (password !== confirmPassword) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         toast({
-          title: "Password Mismatch",
-          description: "Passwords do not match.",
+          title: "Invalid Email",
+          description: "Please enter a valid email address.",
           variant: "destructive",
         });
         return;
       }
-    }
+      if (password || confirmPassword) {
+        if (password.length < 8) {
+          toast({
+            title: "Weak Password",
+            description: "Password must be at least 8 characters.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (password !== confirmPassword) {
+          toast({
+            title: "Password Mismatch",
+            description: "Passwords do not match.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
     const { data: currentUserData } = await supabase.auth.getUser();
     if (!currentUserData.user) {
@@ -261,10 +273,27 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       return;
     }
 
-    const usersTable = supabase.from("users") as any;
+    const usersTable = sb.from("users");
+
+    const upsertUsers = usersTable.upsert as unknown as ((
+      values: TablesInsert<"users">,
+      options?: { onConflict?: string }
+    ) => {
+      select: (columns: string) => {
+        single: () => Promise<{ data: Record<string, unknown> | null; error: PostgrestError | null }>;
+      };
+    });
+
+    const updateUsers = usersTable.update as unknown as ((values: TablesUpdate<"users">) => {
+      eq: (column: string, value: string) => {
+        select: (columns: string) => {
+          single: () => Promise<{ data: Record<string, unknown> | null; error: PostgrestError | null }>;
+        };
+      };
+    });
     let currentProfile = null as null | { id: string; role: string | null };
     const { data: currentProfileData, error: currentProfileError } = await usersTable
-      .select("id, role")
+      .select("id, role") 
       .eq("auth_user_id", currentUserData.user.id)
       .maybeSingle();
 
@@ -283,16 +312,15 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         currentUserData.user.email?.split("@")[0] ??
         "Admin";
 
-      const { data: createdProfile, error: createProfileError } = await usersTable
-        .upsert({
-          auth_user_id: currentUserData.user.id,
-          name: displayName,
-          email: currentUserData.user.email,
-          role: "admin",
-          status: "active",
-        })
-        .select("id, role")
-        .single();
+      const { data: createdProfileRaw, error: createProfileError } = await upsertUsers({
+        auth_user_id: currentUserData.user.id,
+        name: displayName,
+        email: currentUserData.user.email ?? "",
+        role: "admin",
+        status: "active",
+      }).select("id, role").single();
+
+      const createdProfile = createdProfileRaw as unknown as { id: string; role: string | null } | null;
 
       if (createProfileError || !createdProfile) {
         toast({
@@ -309,11 +337,12 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     }
 
     if (currentProfile.role !== "admin") {
-      const { data: promotedProfile, error: promoteError } = await usersTable
-        .update({ role: "admin" })
+      const { data: promotedProfileRaw, error: promoteError } = await updateUsers({ role: "admin" })
         .eq("auth_user_id", currentUserData.user.id)
         .select("id, role")
         .single();
+
+      const promotedProfile = promotedProfileRaw as unknown as { id: string; role: string | null } | null;
 
       if (promoteError || !promotedProfile) {
         toast({
@@ -350,9 +379,13 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       });
 
       if (signUpError) {
+        const message = signUpError.message ?? "";
+        const isRateLimited = /only request this after/i.test(message);
         toast({
           title: "Auth user creation failed",
-          description: signUpError.message,
+          description: isRateLimited
+            ? `${message} (Supabase rate limit: wait, then try again.)`
+            : message,
           variant: "destructive",
         });
         return;
@@ -367,10 +400,13 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         });
       }
     } else {
-      const { data: existingUser, error: existingError } = await usersTable
+      const { data: existingUser, error: existingError } = (await (usersTable
         .select("id, auth_user_id")
         .eq("email", formData.email)
-        .maybeSingle();
+        .maybeSingle() as unknown as Promise<{
+        data: { id: string; auth_user_id: string | null } | null;
+        error: PostgrestError | null;
+      }>));
 
       if (existingError || !existingUser || !existingUser.auth_user_id) {
         toast({
@@ -393,19 +429,23 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       return;
     }
 
-    const { data: userRow, error: profileError } = await usersTable
-      .update({
+    const { data: userRowRaw, error: profileError } = await upsertUsers(
+      {
+        auth_user_id: targetAuthUserId,
         name: formData.name,
         email: formData.email,
-        role: formData.role || "user",
+        role: (formData.role || "user") as TablesInsert<"users">["role"],
         department: formData.department,
         status: "active",
         user_code: userCode,
         avatar,
-      })
-      .eq("auth_user_id", targetAuthUserId)
-      .select()
+      },
+      { onConflict: "email" }
+    )
+      .select("id, auth_user_id, user_code, name, email, role, department, status, avatar, last_login_at, created_at, updated_at")
       .single();
+
+    const userRow = userRowRaw as unknown as { auth_user_id: string | null } | null;
 
     if (profileError || !userRow) {
       toast({
@@ -414,6 +454,31 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         variant: "destructive",
       });
       return;
+    }
+
+    // Store password hash in public.users (DB-only) AFTER the profile row exists.
+    if (password) {
+      let lastError: PostgrestError | null = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const { error: setHashError } = await setUserPassword(targetAuthUserId, password);
+
+        if (!setHashError) {
+          lastError = null;
+          break;
+        }
+
+        lastError = setHashError;
+        await sleep(250 * (attempt + 1));
+      }
+
+      if (lastError) {
+        toast({
+          title: "Password setup failed",
+          description: lastError.message,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     const targetUserId = userRow?.auth_user_id ?? targetAuthUserId;
@@ -427,11 +492,13 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       return;
     }
 
-    const userSettingsTable = supabase.from("user_settings") as any;
-    const { error: settingsError } = await userSettingsTable
-      .upsert({
-        user_id: targetUserId,
-      });
+    const userSettingsTable = sb.from("user_settings");
+    const upsertSettings = userSettingsTable.upsert as unknown as ((
+      values: TablesInsert<"user_settings">,
+      options: { onConflict: string }
+    ) => Promise<{ error: PostgrestError | null }>);
+
+    const { error: settingsError } = await upsertSettings({ user_id: targetUserId }, { onConflict: "user_id" });
 
     if (settingsError) {
       toast({
@@ -442,9 +509,14 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       return;
     }
 
-    const userPermissionsTable = supabase.from("user_permissions") as any;
-    const { error: permissionsError } = await userPermissionsTable
-      .upsert({
+    const userPermissionsTable = sb.from("user_permissions");
+    const upsertPermissions = userPermissionsTable.upsert as unknown as ((
+      values: TablesInsert<"user_permissions">,
+      options: { onConflict: string }
+    ) => Promise<{ error: PostgrestError | null }>);
+
+    const { error: permissionsError } = await upsertPermissions(
+      {
         user_id: targetUserId,
         can_export_data: formData.permissions.canExportData,
         can_import_data: formData.permissions.canImportData,
@@ -453,7 +525,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         can_manage_settings: formData.permissions.canManageSettings,
         can_approve_requests: formData.permissions.canApproveRequests,
         can_bulk_operations: formData.permissions.canBulkOperations,
-      });
+      },
+      { onConflict: "user_id" }
+    );
 
     if (permissionsError) {
       toast({
@@ -473,9 +547,16 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       can_create: access.canCreate,
     }));
 
-    const userPageAccessTable = supabase.from("user_page_access") as any;
-    const { error: pageAccessError } = await userPageAccessTable
-      .upsert(pageAccessRows, { onConflict: "user_id,page" });
+    const userPageAccessTable = sb.from("user_page_access");
+    const upsertPageAccess = userPageAccessTable.upsert as unknown as ((
+      values: TablesInsert<"user_page_access">[],
+      options: { onConflict: string }
+    ) => Promise<{ error: PostgrestError | null }>);
+
+    const { error: pageAccessError } = await upsertPageAccess(
+      pageAccessRows as unknown as TablesInsert<"user_page_access">[],
+      { onConflict: "user_id,page" }
+    );
 
     if (pageAccessError) {
       toast({
@@ -492,6 +573,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       description: `${formData.name} has been added successfully.`,
     });
     handleClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -766,9 +850,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
-              <Button className="gap-2 flex-1 sm:flex-none" onClick={handleSubmit}>
+              <Button className="gap-2 flex-1 sm:flex-none" onClick={handleSubmit} disabled={isSubmitting}>
                 <Check className="w-4 h-4" />
-                Create User
+                {isSubmitting ? "Creating..." : "Create User"}
               </Button>
             </div>
           </div>

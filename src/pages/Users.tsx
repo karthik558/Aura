@@ -6,7 +6,6 @@ import {
   MoreHorizontal,
   Shield,
   ShieldCheck,
-  UserCog,
   Eye,
   Edit,
   Trash2,
@@ -19,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,8 +32,11 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { AddUserDialog } from "@/components/users/AddUserDialog";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Database, Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { adminResetUserPassword, isAdmin as rpcIsAdmin, setMyPassword } from "@/integrations/supabase/rpc";
 import { toast } from "sonner";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +65,7 @@ const item = {
 interface UserData {
   id: string;
   dbId?: string;
+  authUserId?: string | null;
   name: string;
   email: string;
   role: "admin" | "manager" | "staff" | "viewer" | "analyst" | "user";
@@ -69,6 +74,51 @@ interface UserData {
   lastLogin: string;
   avatar: string;
 }
+
+interface PageAccess {
+  page: string;
+  canView: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canCreate: boolean;
+}
+
+interface Permissions {
+  canExportData: boolean;
+  canImportData: boolean;
+  canManageUsers: boolean;
+  canViewReports: boolean;
+  canManageSettings: boolean;
+  canApproveRequests: boolean;
+  canBulkOperations: boolean;
+}
+
+const pages = [
+  { id: "dashboard", name: "Dashboard" },
+  { id: "tracker", name: "Tracker" },
+  { id: "tickets", name: "Tickets" },
+  { id: "users", name: "Users" },
+  { id: "reports", name: "Reports" },
+  { id: "settings", name: "Settings" },
+];
+
+const defaultPageAccess: PageAccess[] = pages.map((page) => ({
+  page: page.id,
+  canView: false,
+  canEdit: false,
+  canDelete: false,
+  canCreate: false,
+}));
+
+const defaultPermissions: Permissions = {
+  canExportData: false,
+  canImportData: false,
+  canManageUsers: false,
+  canViewReports: false,
+  canManageSettings: false,
+  canApproveRequests: false,
+  canBulkOperations: false,
+};
 
 const getInitials = (name: string) => {
   const parts = name.trim().split(" ").filter(Boolean);
@@ -80,8 +130,6 @@ const getInitials = (name: string) => {
 const roleConfig = {
   admin: { label: "Admin", icon: ShieldCheck, className: "bg-danger/10 text-danger" },
   manager: { label: "Manager", icon: Shield, className: "bg-primary/10 text-primary" },
-  staff: { label: "Staff", icon: UserCog, className: "bg-success/10 text-success" },
-  viewer: { label: "Viewer", icon: Eye, className: "bg-muted text-muted-foreground" },
   analyst: { label: "Analyst", icon: Eye, className: "bg-warning/10 text-warning" },
   user: { label: "User", icon: Eye, className: "bg-muted text-muted-foreground" },
 };
@@ -110,11 +158,13 @@ function UsersSkeleton() {
 }
 
 const Users = () => {
+  const sb = supabase as SupabaseClient<Database, "public">;
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [users, setUsers] = useState<UserData[]>([]);
   const [currentAuthUserId, setCurrentAuthUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [userDialogMode, setUserDialogMode] = useState<"view" | "edit">("view");
   const [activeUser, setActiveUser] = useState<UserData | null>(null);
@@ -126,14 +176,18 @@ const Users = () => {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [pageAccess, setPageAccess] = useState<PageAccess[]>(defaultPageAccess);
+  const [permissions, setPermissions] = useState<Permissions>(defaultPermissions);
   
   useDocumentTitle("Users");
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
-    const usersTable = supabase.from("users") as any;
+    const usersTable = sb.from("users");
     const { data, error } = await usersTable
-      .select("*")
+      .select("id, auth_user_id, user_code, name, email, role, department, status, last_login_at, avatar, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -145,6 +199,7 @@ const Users = () => {
     const mappedUsers: UserData[] = ((data ?? []) as Tables<"users">[]).map((user) => ({
       id: user.user_code ?? user.id,
       dbId: user.id,
+      authUserId: user.auth_user_id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -156,7 +211,7 @@ const Users = () => {
 
     setUsers(mappedUsers);
     setIsLoading(false);
-  }, []);
+  }, [sb]);
 
   useEffect(() => {
     fetchUsers();
@@ -168,6 +223,10 @@ const Users = () => {
       const { data } = await supabase.auth.getUser();
       if (!isMounted) return;
       setCurrentAuthUserId(data.user?.id ?? null);
+
+      const { data: adminData, error: adminError } = await rpcIsAdmin();
+      if (!isMounted) return;
+      if (!adminError) setIsAdmin(Boolean(adminData));
     };
     loadCurrentUser();
     return () => {
@@ -185,14 +244,99 @@ const Users = () => {
   };
 
   const openUserDialog = (user: UserData, mode: "view" | "edit") => {
+    const normalizedRole = (user.role === "staff" || user.role === "viewer") ? "user" : user.role;
     setActiveUser(user);
     setUserDialogMode(mode);
     setEditForm({
-      role: user.role,
+      role: normalizedRole,
       department: user.department,
       status: user.status,
     });
+    setPageAccess(defaultPageAccess);
+    setPermissions(defaultPermissions);
     setIsUserDialogOpen(true);
+
+    if (mode === "edit" && isAdmin && user.authUserId) {
+      // Load permissions/page access for the target user
+      (async () => {
+        const userId = user.authUserId;
+        const permsTable = sb.from("user_permissions");
+        const accessTable = sb.from("user_page_access");
+
+        type PermissionsSelectRow = {
+          can_export_data: boolean | null;
+          can_import_data: boolean | null;
+          can_manage_users: boolean | null;
+          can_view_reports: boolean | null;
+          can_manage_settings: boolean | null;
+          can_approve_requests: boolean | null;
+          can_bulk_operations: boolean | null;
+        };
+
+        type PageAccessSelectRow = {
+          page: string;
+          can_view: boolean | null;
+          can_edit: boolean | null;
+          can_delete: boolean | null;
+          can_create: boolean | null;
+        };
+
+        const [permsResp, accessResp] = await Promise.all([
+          permsTable
+            .select(
+              "can_export_data, can_import_data, can_manage_users, can_view_reports, can_manage_settings, can_approve_requests, can_bulk_operations"
+            )
+            .eq("user_id", userId)
+            .maybeSingle() as unknown as Promise<{
+            data: PermissionsSelectRow | null;
+            error: PostgrestError | null;
+          }>,
+          accessTable
+            .select("page, can_view, can_edit, can_delete, can_create")
+            .eq("user_id", userId) as unknown as Promise<{
+            data: PageAccessSelectRow[] | null;
+            error: PostgrestError | null;
+          }>,
+        ]);
+
+        const permsRow = permsResp.data;
+        const accessRows = accessResp.data;
+
+        if (permsRow) {
+          setPermissions({
+            canExportData: Boolean(permsRow.can_export_data),
+            canImportData: Boolean(permsRow.can_import_data),
+            canManageUsers: Boolean(permsRow.can_manage_users),
+            canViewReports: Boolean(permsRow.can_view_reports),
+            canManageSettings: Boolean(permsRow.can_manage_settings),
+            canApproveRequests: Boolean(permsRow.can_approve_requests),
+            canBulkOperations: Boolean(permsRow.can_bulk_operations),
+          });
+        }
+
+        if (Array.isArray(accessRows) && accessRows.length > 0) {
+          setPageAccess(
+            defaultPageAccess.map((p) => {
+              const row = accessRows.find((r) => r.page === p.page);
+              return row
+                ? {
+                    page: p.page,
+                    canView: Boolean(row.can_view),
+                    canEdit: Boolean(row.can_edit),
+                    canDelete: Boolean(row.can_delete),
+                    canCreate: Boolean(row.can_create),
+                  }
+                : p;
+            })
+          );
+        }
+      })();
+    }
+  };
+
+  const openDeleteDialog = (user: UserData) => {
+    setActiveUser(user);
+    setIsDeleteDialogOpen(true);
   };
 
   const openResetPassword = (user: UserData) => {
@@ -218,43 +362,189 @@ const Users = () => {
       return;
     }
 
-    const isSelf = activeUser.dbId && currentAuthUserId === activeUser.dbId;
-    if (!isSelf) {
-      toast.info("Only the signed-in user can reset their own password here.");
+    const targetAuthUserId = activeUser.authUserId;
+    if (!targetAuthUserId) {
+      toast.error("This user is missing an auth_user_id.");
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      toast.error("Failed to reset password", { description: error.message });
+    const isSelf = currentAuthUserId === targetAuthUserId;
+
+    if (isSelf) {
+      const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+      if (authError) {
+        toast.error("Failed to update Auth password", { description: authError.message });
+        return;
+      }
+
+      const { error: dbError } = await setMyPassword(newPassword);
+      if (dbError) {
+        toast.error("Failed to update database password hash", { description: dbError.message });
+        return;
+      }
+
+      toast.success("Password updated");
+      setIsResetDialogOpen(false);
       return;
     }
 
-    toast.success("Password updated");
+    if (!isAdmin) {
+      toast.error("Admin access required to reset another user's password.");
+      return;
+    }
+
+    const { error: resetError } = await adminResetUserPassword(targetAuthUserId, newPassword);
+
+    if (resetError) {
+      toast.error("Failed to reset password", { description: resetError.message });
+      return;
+    }
+
+    toast.success("Password reset (database hash updated)");
     setIsResetDialogOpen(false);
   };
 
   const handleSaveUser = async () => {
     if (!activeUser) return;
 
-    const usersTable = supabase.from("users") as any;
+    if (userDialogMode === "edit" && isAdmin && activeUser.authUserId) {
+      setIsSavingPermissions(true);
+    }
+
+    const usersTable = sb.from("users");
     const targetColumn = activeUser.dbId ? "id" : "user_code";
     const targetValue = activeUser.dbId ?? activeUser.id;
-    const { error } = await usersTable
-      .update({
-        role: editForm.role,
-        department: editForm.department,
-        status: editForm.status,
-      })
-      .eq(targetColumn, targetValue);
+    const updateUser = usersTable.update as unknown as ((
+      values: TablesUpdate<"users">
+    ) => {
+      eq: (
+        column: string,
+        value: string
+      ) => Promise<{ error: PostgrestError | null }>;
+    });
+
+    const { error } = await updateUser({
+      role: editForm.role,
+      department: editForm.department,
+      status: editForm.status,
+    }).eq(targetColumn, targetValue);
 
     if (error) {
       toast.error("Failed to update user", { description: error.message });
+      setIsSavingPermissions(false);
       return;
     }
 
+    // Admin-only: also persist permissions + page access edits
+    if (userDialogMode === "edit" && isAdmin && activeUser.authUserId) {
+      const userId = activeUser.authUserId;
+      const permsTable = sb.from("user_permissions");
+      const accessTable = sb.from("user_page_access");
+
+      const upsertPermissions = permsTable.upsert as unknown as ((
+        values: TablesInsert<"user_permissions">,
+        options: { onConflict: string }
+      ) => Promise<{ error: PostgrestError | null }>);
+
+      const { error: permsError } = await upsertPermissions(
+        {
+          user_id: userId,
+          can_export_data: permissions.canExportData,
+          can_import_data: permissions.canImportData,
+          can_manage_users: permissions.canManageUsers,
+          can_view_reports: permissions.canViewReports,
+          can_manage_settings: permissions.canManageSettings,
+          can_approve_requests: permissions.canApproveRequests,
+          can_bulk_operations: permissions.canBulkOperations,
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (permsError) {
+        toast.error("Failed to update permissions", { description: permsError.message });
+        setIsSavingPermissions(false);
+        return;
+      }
+
+      const rows = pageAccess.map((a) => ({
+        user_id: userId,
+        page: a.page,
+        can_view: a.canView,
+        can_edit: a.canEdit,
+        can_delete: a.canDelete,
+        can_create: a.canCreate,
+      }));
+
+      const upsertPageAccess = accessTable.upsert as unknown as ((
+        values: TablesInsert<"user_page_access">[],
+        options: { onConflict: string }
+      ) => Promise<{ error: PostgrestError | null }>);
+
+      const { error: accessError } = await upsertPageAccess(rows, { onConflict: "user_id,page" });
+      if (accessError) {
+        toast.error("Failed to update page access", { description: accessError.message });
+        setIsSavingPermissions(false);
+        return;
+      }
+    }
+
     toast.success("User updated");
+    setIsSavingPermissions(false);
     setIsUserDialogOpen(false);
+    fetchUsers();
+  };
+
+  const handleDeleteUser = async () => {
+    if (!activeUser?.authUserId) {
+      toast.error("Cannot delete: missing auth_user_id.");
+      return;
+    }
+    if (!isAdmin) {
+      toast.error("Admin access required.");
+      return;
+    }
+
+    const userId = activeUser.authUserId;
+    const accessTable = sb.from("user_page_access");
+    const permsTable = sb.from("user_permissions");
+    const settingsTable = sb.from("user_settings");
+    const usersTable = sb.from("users");
+
+    const { error: accessError } = (await (accessTable.delete().eq("user_id", userId) as unknown as Promise<{
+      error: PostgrestError | null;
+    }>));
+    if (accessError) {
+      toast.error("Failed to delete page access", { description: accessError.message });
+      return;
+    }
+
+    const { error: permsError } = (await (permsTable.delete().eq("user_id", userId) as unknown as Promise<{
+      error: PostgrestError | null;
+    }>));
+    if (permsError) {
+      toast.error("Failed to delete permissions", { description: permsError.message });
+      return;
+    }
+
+    const { error: settingsError } = (await (settingsTable.delete().eq("user_id", userId) as unknown as Promise<{
+      error: PostgrestError | null;
+    }>));
+    if (settingsError) {
+      toast.error("Failed to delete settings", { description: settingsError.message });
+      return;
+    }
+
+    const { error: profileError } = (await (usersTable.delete().eq("auth_user_id", userId) as unknown as Promise<{
+      error: PostgrestError | null;
+    }>));
+    if (profileError) {
+      toast.error("Failed to delete user profile", { description: profileError.message });
+      return;
+    }
+
+    toast.success("User deleted (profile + access removed)");
+    setIsDeleteDialogOpen(false);
+    setActiveUser(null);
     fetchUsers();
   };
 
@@ -283,7 +573,7 @@ const Users = () => {
       />
 
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
-        <DialogContent className="sm:max-w-[520px]">
+        <DialogContent className="sm:max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {userDialogMode === "view" ? "User Profile" : "Edit User"}
@@ -315,8 +605,6 @@ const Users = () => {
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="staff">Staff</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
                         <SelectItem value="analyst">Analyst</SelectItem>
                         <SelectItem value="user">User</SelectItem>
                       </SelectContent>
@@ -354,11 +642,132 @@ const Users = () => {
                   <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveUser}>Save</Button>
+                  <Button onClick={handleSaveUser} disabled={isSavingPermissions}>
+                    {isSavingPermissions ? "Saving..." : "Save"}
+                  </Button>
                 </div>
+              )}
+
+              {userDialogMode === "edit" && isAdmin && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Permissions</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {Object.entries(permissions).map(([key, value]) => (
+                        <label key={key} className="flex items-center gap-2 rounded-lg border p-3">
+                          <Checkbox
+                            checked={value}
+                            onCheckedChange={(checked) =>
+                              setPermissions((prev) => ({ ...prev, [key]: Boolean(checked) }))
+                            }
+                          />
+                          <span className="text-sm">
+                            {key.replace("can", "").replace(/([A-Z])/g, " $1").trim()}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Page Access</p>
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[520px]">
+                          <div className="grid grid-cols-5 gap-2 p-3 bg-muted/50 text-xs font-medium">
+                            <div>Page</div>
+                            <div className="text-center">View</div>
+                            <div className="text-center">Edit</div>
+                            <div className="text-center">Delete</div>
+                            <div className="text-center">Create</div>
+                          </div>
+                          {pages.map((page) => {
+                            const access = pageAccess.find((p) => p.page === page.id) ?? {
+                              page: page.id,
+                              canView: false,
+                              canEdit: false,
+                              canDelete: false,
+                              canCreate: false,
+                            };
+
+                            const updateAccess = (
+                              pageId: string,
+                              field: keyof Omit<PageAccess, "page">,
+                              next: boolean
+                            ) => {
+                              setPageAccess((prev) =>
+                                prev.map((p) => (p.page === pageId ? { ...p, [field]: next } : p))
+                              );
+                            };
+
+                            return (
+                              <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t items-center">
+                                <div className="text-sm">{page.name}</div>
+                                <div className="flex justify-center">
+                                  <Checkbox
+                                    checked={access.canView}
+                                    onCheckedChange={(checked) => updateAccess(page.id, "canView", Boolean(checked))}
+                                  />
+                                </div>
+                                <div className="flex justify-center">
+                                  <Checkbox
+                                    checked={access.canEdit}
+                                    onCheckedChange={(checked) => updateAccess(page.id, "canEdit", Boolean(checked))}
+                                  />
+                                </div>
+                                <div className="flex justify-center">
+                                  <Checkbox
+                                    checked={access.canDelete}
+                                    onCheckedChange={(checked) => updateAccess(page.id, "canDelete", Boolean(checked))}
+                                  />
+                                </div>
+                                <div className="flex justify-center">
+                                  <Checkbox
+                                    checked={access.canCreate}
+                                    onCheckedChange={(checked) => updateAccess(page.id, "canCreate", Boolean(checked))}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Only admins can edit permissions and page access.
+                    </p>
+                  </div>
+                </>
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will delete the user's profile, settings, permissions and page access records.
+              It will not delete the Auth user (requires server/service role).
+            </p>
+            <div className="rounded-lg border p-3">
+              <p className="text-sm font-medium">{activeUser?.name}</p>
+              <p className="text-xs text-muted-foreground">{activeUser?.email}</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteUser}>
+                Delete
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -388,7 +797,7 @@ const Users = () => {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Passwords are managed by Supabase Auth and are not stored in the users table.
+              Passwords are stored as a one-way hash in the users table (and your own Auth password is updated when you change your password).
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
@@ -430,7 +839,7 @@ const Users = () => {
       </motion.div>
 
       {/* Desktop Table */}
-      <motion.div variants={item} className="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
+      <motion.div variants={item} className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
@@ -490,20 +899,23 @@ const Users = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openUserDialog(user, "view")} className="flex items-center gap-2">
+                            <DropdownMenuItem onSelect={() => openUserDialog(user, "view")} className="flex items-center gap-2 cursor-pointer">
                               <Eye className="w-4 h-4" /> View Profile
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openUserDialog(user, "edit")} className="flex items-center gap-2">
+                            <DropdownMenuItem onSelect={() => openUserDialog(user, "edit")} className="flex items-center gap-2 cursor-pointer">
                               <Edit className="w-4 h-4" /> Edit User
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openResetPassword(user)} className="flex items-center gap-2">
+                            <DropdownMenuItem onSelect={() => openResetPassword(user)} className="flex items-center gap-2 cursor-pointer">
                               <Key className="w-4 h-4" /> Reset Password
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toast.info("Send email is not wired yet") } className="flex items-center gap-2">
+                            <DropdownMenuItem onSelect={() => toast.info("Send email is not wired yet")} className="flex items-center gap-2 cursor-pointer">
                               <Mail className="w-4 h-4" /> Send Email
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-danger focus:text-danger focus:bg-danger/10">
+                            <DropdownMenuItem
+                              className="text-danger focus:text-danger focus:bg-danger/10 cursor-pointer"
+                              onSelect={() => openDeleteDialog(user)}
+                            >
                               <Trash2 className="w-4 h-4 mr-2" /> Delete User
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -517,66 +929,6 @@ const Users = () => {
           </table>
         </div>
       </motion.div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {filteredUsers.map((user, index) => {
-          const config = roleConfig[user.role] ?? defaultRoleConfig;
-          const RoleIcon = config.icon;
-          return (
-            <motion.div
-              key={user.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
-              className="bg-card rounded-xl border border-border p-4"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-sm font-medium">
-                      {user.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => openUserDialog(user, "view")} className="flex items-center gap-2">
-                      <Eye className="w-4 h-4" /> View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => openUserDialog(user, "edit")} className="flex items-center gap-2">
-                      <Edit className="w-4 h-4" /> Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-danger"><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge className={cn("gap-1 text-xs", config.className)}>
-                    <RoleIcon className="w-3 h-3" />
-                    {config.label}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{user.department}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch checked={user.status === "active"} />
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
     </motion.div>
   );
 };
