@@ -65,6 +65,8 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          user_name: string | null
+          user_email: string | null
           theme: string | null
           start_collapsed: boolean
           sticky_header: boolean
@@ -81,6 +83,8 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
+          user_name?: string | null
+          user_email?: string | null
           theme?: string | null
           start_collapsed?: boolean
           sticky_header?: boolean
@@ -97,6 +101,8 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
+          user_name?: string | null
+          user_email?: string | null
           theme?: string | null
           start_collapsed?: boolean
           sticky_header?: boolean
@@ -115,6 +121,8 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          user_name: string | null
+          user_email: string | null
           page: string
           can_view: boolean
           can_edit: boolean
@@ -126,6 +134,8 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
+          user_name?: string | null
+          user_email?: string | null
           page: string
           can_view?: boolean
           can_edit?: boolean
@@ -137,6 +147,8 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
+          user_name?: string | null
+          user_email?: string | null
           page?: string
           can_view?: boolean
           can_edit?: boolean
@@ -150,6 +162,8 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          user_name: string | null
+          user_email: string | null
           can_export_data: boolean
           can_import_data: boolean
           can_manage_users: boolean
@@ -163,6 +177,8 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
+          user_name?: string | null
+          user_email?: string | null
           can_export_data?: boolean
           can_import_data?: boolean
           can_manage_users?: boolean
@@ -176,6 +192,8 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
+          user_name?: string | null
+          user_email?: string | null
           can_export_data?: boolean
           can_import_data?: boolean
           can_manage_users?: boolean
@@ -375,6 +393,8 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          user_name: string | null
+          user_email: string | null
           action: string
           entity_type: string | null
           entity_id: string | null
@@ -386,6 +406,8 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
+          user_name?: string | null
+          user_email?: string | null
           action: string
           entity_type?: string | null
           entity_id?: string | null
@@ -397,6 +419,8 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
+          user_name?: string | null
+          user_email?: string | null
           action?: string
           entity_type?: string | null
           entity_id?: string | null
@@ -410,6 +434,8 @@ export type Database = {
         Row: {
           id: string
           user_id: string
+          user_name: string | null
+          user_email: string | null
           login_at: string
           success: boolean
           ip_address: string | null
@@ -418,6 +444,8 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
+          user_name?: string | null
+          user_email?: string | null
           login_at?: string
           success?: boolean
           ip_address?: string | null
@@ -426,6 +454,8 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
+          user_name?: string | null
+          user_email?: string | null
           login_at?: string
           success?: boolean
           ip_address?: string | null

@@ -37,6 +37,8 @@ import { adminResetUserPassword, isAdmin as rpcIsAdmin, setMyPassword } from "@/
 import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { useNavigate } from "react-router-dom";
+import { useUserAccess } from "@/context/UserAccessContext";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +163,8 @@ function UsersSkeleton() {
 
 const Users = () => {
   const sb = supabase as SupabaseClient<Database, "public">;
+  const navigate = useNavigate();
+  const { loading: accessLoading, isAdmin: accessIsAdmin, canViewPage } = useUserAccess();
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -235,6 +239,15 @@ const Users = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (accessLoading) return;
+    if (accessIsAdmin) return;
+    if (!canViewPage("users")) {
+      toast.error("Access denied", { description: "You do not have access to the Users page." });
+      navigate("/", { replace: true });
+    }
+  }, [accessLoading, accessIsAdmin, canViewPage, navigate]);
 
   useEffect(() => {
     if (!currentAuthUserId || isAdmin) return;
@@ -458,6 +471,8 @@ const Users = () => {
       const { error: permsError } = await upsertPermissions(
         {
           user_id: userId,
+          user_name: activeUser.name,
+          user_email: activeUser.email,
           can_export_data: permissions.canExportData,
           can_import_data: permissions.canImportData,
           can_manage_users: permissions.canManageUsers,
@@ -477,6 +492,8 @@ const Users = () => {
 
       const rows = pageAccess.map((a) => ({
         user_id: userId,
+        user_name: activeUser.name,
+        user_email: activeUser.email,
         page: a.page,
         can_view: a.canView,
         can_edit: a.canEdit,

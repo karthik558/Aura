@@ -43,6 +43,10 @@ import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { supabase } from "@/integrations/supabase/client";
 import { setMyPassword } from "@/integrations/supabase/rpc";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useUserAccess } from "@/context/UserAccessContext";
+import type { SupabaseClient, PostgrestError } from "@supabase/supabase-js";
+import type { Database, TablesInsert } from "@/integrations/supabase/types";
 
 const container = {
   hidden: { opacity: 0 },
@@ -73,6 +77,9 @@ function SettingsSkeleton() {
 }
 
 const Settings = () => {
+  const sb = supabase as SupabaseClient<Database, "public">;
+  const navigate = useNavigate();
+  const { loading: accessLoading, isAdmin: accessIsAdmin, canViewPage, profile } = useUserAccess();
   const [isLoading, setIsLoading] = useState(true);
   const { theme, setTheme } = useTheme();
   const { 
@@ -83,7 +90,10 @@ const Settings = () => {
     setStickyHeader, 
     setTopNavMode 
   } = useLayoutSettings();
-  const [userRole, setUserRole] = useState("admin");
+  const [userRole, setUserRole] = useState("user");
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [sidebarStyle, setSidebarStyle] = useState("default");
   const [fontSize, setFontSize] = useState("medium");
   const [compactMode, setCompactMode] = useState(false);
@@ -133,6 +143,90 @@ const Settings = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!profile) return;
+    setUserRole(profile.role);
+    setProfileName(profile.name);
+    setProfileEmail(profile.email ?? "");
+  }, [profile]);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!profile?.authUserId) return;
+      const userSettingsTable = sb.from("user_settings");
+      const { data, error } = (await (userSettingsTable
+        .select("start_collapsed, sticky_header, top_nav_mode, sidebar_style, font_size, compact_mode")
+        .eq("user_id", profile.authUserId)
+        .maybeSingle() as unknown as Promise<{
+        data: {
+          start_collapsed: boolean | null;
+          sticky_header: boolean | null;
+          top_nav_mode: boolean | null;
+          sidebar_style: string | null;
+          font_size: string | null;
+          compact_mode: boolean | null;
+        } | null;
+        error: PostgrestError | null;
+      }>));
+
+      if (error) return;
+
+      if (data) {
+        setStartCollapsed(Boolean(data.start_collapsed));
+        setStickyHeader(Boolean(data.sticky_header));
+        setTopNavMode(Boolean(data.top_nav_mode));
+        setSidebarStyle(data.sidebar_style ?? "default");
+        setFontSize(data.font_size ?? "medium");
+        setCompactMode(Boolean(data.compact_mode));
+      }
+    };
+
+    loadSettings();
+  }, [profile, setStartCollapsed, setStickyHeader, setTopNavMode]);
+
+  const handleSaveSettings = async () => {
+    if (!profile?.authUserId) return;
+    setIsSavingSettings(true);
+    const userSettingsTable = sb.from("user_settings");
+    const upsertSettings = userSettingsTable.upsert as unknown as ((
+      values: TablesInsert<"user_settings">,
+      options: { onConflict: string }
+    ) => Promise<{ error: PostgrestError | null }>);
+
+    const { error } = await upsertSettings(
+      {
+        user_id: profile.authUserId,
+        user_name: profileName,
+        user_email: profileEmail,
+        start_collapsed: startCollapsed,
+        sticky_header: stickyHeader,
+        top_nav_mode: topNavMode,
+        sidebar_style: sidebarStyle,
+        font_size: fontSize,
+        compact_mode: compactMode,
+      },
+      { onConflict: "user_id" }
+    );
+
+    if (error) {
+      toast.error("Failed to save settings", { description: error.message });
+      setIsSavingSettings(false);
+      return;
+    }
+
+    toast.success("Settings saved");
+    setIsSavingSettings(false);
+  };
+
+  useEffect(() => {
+    if (accessLoading) return;
+    if (accessIsAdmin) return;
+    if (!canViewPage("settings")) {
+      toast.error("Access denied", { description: "You do not have access to the Settings page." });
+      navigate("/", { replace: true });
+    }
+  }, [accessLoading, accessIsAdmin, canViewPage, navigate]);
+
   if (isLoading) {
     return <SettingsSkeleton />;
   }
@@ -164,11 +258,11 @@ const Settings = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="fullName" className="text-xs">Full Name</Label>
-            <Input id="fullName" defaultValue="John Doe" className="h-9" />
+            <Input id="fullName" value={profileName} readOnly className="h-9" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs">Email</Label>
-            <Input id="email" defaultValue="john@hotel.com" className="h-9" />
+            <Input id="email" value={profileEmail} readOnly className="h-9" />
           </div>
         </div>
       </motion.div>
@@ -473,9 +567,9 @@ const Settings = () => {
 
       {/* Save */}
       <motion.div variants={item} className="flex justify-end pt-2">
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={handleSaveSettings} disabled={isSavingSettings}>
           <Save className="w-4 h-4" />
-          Save Changes
+          {isSavingSettings ? "Saving..." : "Save Changes"}
         </Button>
       </motion.div>
 

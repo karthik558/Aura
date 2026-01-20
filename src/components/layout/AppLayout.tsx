@@ -1,20 +1,71 @@
-import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { TopNav } from "./TopNav";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { cn } from "@/lib/utils";
 import { useLayoutSettings } from "@/hooks/useLayoutSettings";
+import { UserAccessProvider, useUserAccess } from "@/context/UserAccessContext";
 
-export function AppLayout() {
+const pageIdByPath: Record<string, string> = {
+  "/": "dashboard",
+  "/tracker": "tracker",
+  "/reports": "reports",
+  "/tickets": "tickets",
+  "/users": "users",
+  "/settings": "settings",
+  "/system-status": "system-status",
+};
+
+const pathByPageId: Record<string, string> = {
+  dashboard: "/",
+  tracker: "/tracker",
+  reports: "/reports",
+  tickets: "/tickets",
+  users: "/users",
+  settings: "/settings",
+  "system-status": "/system-status",
+};
+
+function AppLayoutContent() {
   const { startCollapsed, stickyHeader, topNavMode } = useLayoutSettings();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(startCollapsed);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { pageAccess, isAdmin, loading, canViewPage } = useUserAccess();
 
-  // Sync with startCollapsed setting when it changes
   useEffect(() => {
     setSidebarCollapsed(startCollapsed);
   }, [startCollapsed]);
+
+  const firstAllowedPath = useMemo(() => {
+    if (isAdmin) return "/";
+    const firstAllowed = Object.values(pageAccess).find((access) => access.canView);
+    if (!firstAllowed) return "/";
+    return pathByPageId[firstAllowed.page] ?? "/";
+  }, [isAdmin, pageAccess]);
+
+  useEffect(() => {
+    if (loading) return;
+    const pageId = pageIdByPath[location.pathname];
+    if (!pageId) return;
+    if (isAdmin) return;
+    if (pageId === "system-status") {
+      navigate(firstAllowedPath, { replace: true });
+      return;
+    }
+    if (!canViewPage(pageId)) {
+      navigate(firstAllowedPath, { replace: true });
+    }
+  }, [loading, location.pathname, isAdmin, canViewPage, firstAllowedPath, navigate]);
+
+  if (!loading) {
+    const pageId = pageIdByPath[location.pathname];
+    if (pageId && !isAdmin && !canViewPage(pageId)) {
+      return <Navigate to={firstAllowedPath} replace />;
+    }
+  }
 
   if (topNavMode) {
     return (
@@ -62,5 +113,13 @@ export function AppLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+export function AppLayout() {
+  return (
+    <UserAccessProvider>
+      <AppLayoutContent />
+    </UserAccessProvider>
   );
 }

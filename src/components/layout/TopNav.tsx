@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useTheme } from "@/components/ThemeProvider";
 import { supabase } from "@/integrations/supabase/client";
 import auraLogo from "@/assets/aura-logo.png";
+import { useUserAccess } from "@/context/UserAccessContext";
 import {
   Tooltip,
   TooltipContent,
@@ -44,12 +45,12 @@ interface TopNavProps {
 }
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: ClipboardList, label: "Tracker", path: "/tracker" },
-  { icon: FileBarChart, label: "Reports", path: "/reports" },
-  { icon: Ticket, label: "Tickets", path: "/tickets" },
-  { icon: Users, label: "Users", path: "/users" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", pageId: "dashboard" },
+  { icon: ClipboardList, label: "Tracker", path: "/tracker", pageId: "tracker" },
+  { icon: FileBarChart, label: "Reports", path: "/reports", pageId: "reports" },
+  { icon: Ticket, label: "Tickets", path: "/tickets", pageId: "tickets" },
+  { icon: Users, label: "Users", path: "/users", pageId: "users" },
+  { icon: Settings, label: "Settings", path: "/settings", pageId: "settings" },
 ];
 
 const quickLinks = [
@@ -71,6 +72,7 @@ export function TopNav({ stickyHeader }: TopNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { profile, isAdmin, loading, canViewPage } = useUserAccess();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -80,6 +82,20 @@ export function TopNav({ stickyHeader }: TopNavProps) {
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
+
+  const displayName = profile?.name ?? "User";
+  const roleLabel = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : "User";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  const visibleNavItems = (loading || isAdmin)
+    ? navItems
+    : navItems.filter((item) => canViewPage(item.pageId));
 
   return (
     <header 
@@ -100,7 +116,7 @@ export function TopNav({ stickyHeader }: TopNavProps) {
 
         {/* Navigation Links */}
         <nav className="flex items-center gap-1 flex-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -197,16 +213,16 @@ export function TopNav({ stickyHeader }: TopNavProps) {
               <Button variant="ghost" className="h-9 gap-2 px-2 rounded-lg">
                 <Avatar className="w-7 h-7 ring-2 ring-sidebar-border">
                   <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-semibold">
-                    KS
+                    {initials || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-sidebar-foreground">Karthik</span>
+                <span className="text-sm font-medium text-sidebar-foreground">{displayName}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">Karthik</p>
-                <p className="text-xs text-muted-foreground">Admin</p>
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{roleLabel}</p>
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/settings")}>

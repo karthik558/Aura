@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -46,15 +47,15 @@ interface SidebarProps {
 }
 
 const mainNavItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: ClipboardList, label: "Tracker", path: "/tracker" },
-  { icon: FileBarChart, label: "Reports", path: "/reports" },
-  { icon: Ticket, label: "Tickets", path: "/tickets" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", pageId: "dashboard" },
+  { icon: ClipboardList, label: "Tracker", path: "/tracker", pageId: "tracker" },
+  { icon: FileBarChart, label: "Reports", path: "/reports", pageId: "reports" },
+  { icon: Ticket, label: "Tickets", path: "/tickets", pageId: "tickets" },
 ];
 
 const systemNavItems = [
-  { icon: Users, label: "Users", path: "/users" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Users, label: "Users", path: "/users", pageId: "users" },
+  { icon: Settings, label: "Settings", path: "/settings", pageId: "settings" },
 ];
 
 const quickLinks = [
@@ -82,6 +83,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { profile, isAdmin, loading, canViewPage } = useUserAccess();
   const [notifications, setNotifications] = useState(mockNotifications);
   const [notificationOpen, setNotificationOpen] = useState(false);
 
@@ -105,6 +107,26 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
+
+  const displayName = profile?.name ?? "User";
+  const roleLabel = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : "User";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  const visibleMainNavItems = useMemo(() => {
+    if (loading || isAdmin) return mainNavItems;
+    return mainNavItems.filter((item) => canViewPage(item.pageId));
+  }, [loading, isAdmin, canViewPage]);
+
+  const visibleSystemNavItems = useMemo(() => {
+    if (loading || isAdmin) return systemNavItems;
+    return systemNavItems.filter((item) => canViewPage(item.pageId));
+  }, [loading, isAdmin, canViewPage]);
 
   const NavLink = ({ item, index }: { item: typeof mainNavItems[0]; index: number }) => {
     const isActive = location.pathname === item.path;
@@ -231,7 +253,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3">
         <nav className="px-2 space-y-1">
-          {mainNavItems.map((item, index) => (
+          {visibleMainNavItems.map((item, index) => (
             <NavLink key={item.path} item={item} index={index} />
           ))}
         </nav>
@@ -241,8 +263,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         <nav className="px-2 space-y-1">
-          {systemNavItems.map((item, index) => (
-            <NavLink key={item.path} item={item} index={index + mainNavItems.length} />
+          {visibleSystemNavItems.map((item, index) => (
+            <NavLink key={item.path} item={item} index={index + visibleMainNavItems.length} />
           ))}
         </nav>
 
@@ -307,32 +329,33 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Bottom Section */}
       <div className="px-2 pb-2">
-        {/* System Status Pill */}
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Link
-              to="/system-status"
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20 hover:bg-success/15 transition-all duration-200",
-                collapsed && "justify-center px-2"
-              )}
-            >
-              <Activity className="w-4 h-4 text-success" />
-              {!collapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-success">All Systems</p>
-                  <p className="text-[10px] text-success/70">Operational</p>
-                </div>
-              )}
-            </Link>
-          </TooltipTrigger>
-          {collapsed && (
-            <TooltipContent side="right" sideOffset={10}>
-              <p className="font-medium">System Status</p>
-              <p className="text-xs text-muted-foreground">All systems operational</p>
-            </TooltipContent>
-          )}
-        </Tooltip>
+        {isAdmin && (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Link
+                to="/system-status"
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20 hover:bg-success/15 transition-all duration-200",
+                  collapsed && "justify-center px-2"
+                )}
+              >
+                <Activity className="w-4 h-4 text-success" />
+                {!collapsed && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-success">All Systems</p>
+                    <p className="text-[10px] text-success/70">Operational</p>
+                  </div>
+                )}
+              </Link>
+            </TooltipTrigger>
+            {collapsed && (
+              <TooltipContent side="right" sideOffset={10}>
+                <p className="font-medium">System Status</p>
+                <p className="text-xs text-muted-foreground">All systems operational</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        )}
       </div>
       <div className="p-2 border-t border-sidebar-border space-y-1 shrink-0">
         {/* Notifications */}
@@ -473,13 +496,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}>
           <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-sidebar-border">
             <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-semibold">
-              KS
+              {initials || "U"}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-sidebar-foreground">Karthik</p>
-              <p className="text-[11px] text-sidebar-muted truncate">Admin</p>
+              <p className="text-sm font-medium truncate text-sidebar-foreground">{displayName}</p>
+              <p className="text-[11px] text-sidebar-muted truncate">{roleLabel}</p>
             </div>
           )}
           {!collapsed && (

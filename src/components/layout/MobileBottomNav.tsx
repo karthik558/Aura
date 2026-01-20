@@ -8,17 +8,23 @@ import {
   Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 const navItems = [
-  { icon: LayoutDashboard, path: "/", label: "Dashboard" },
-  { icon: ClipboardList, path: "/tracker", label: "Tracker" },
-  { icon: FileBarChart, path: "/reports", label: "Reports" },
-  { icon: Ticket, path: "/tickets", label: "Tickets" },
-  { icon: Users, path: "/users", label: "Users" },
+  { icon: LayoutDashboard, path: "/", label: "Dashboard", pageId: "dashboard" },
+  { icon: ClipboardList, path: "/tracker", label: "Tracker", pageId: "tracker" },
+  { icon: FileBarChart, path: "/reports", label: "Reports", pageId: "reports" },
+  { icon: Ticket, path: "/tickets", label: "Tickets", pageId: "tickets" },
+  { icon: Users, path: "/users", label: "Users", pageId: "users" },
 ];
 
 export function MobileBottomNav() {
   const location = useLocation();
+  const { loading, isAdmin, canViewPage } = useUserAccess();
+
+  const visibleNavItems = (loading || isAdmin)
+    ? navItems
+    : navItems.filter((item) => canViewPage(item.pageId));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
@@ -27,7 +33,7 @@ export function MobileBottomNav() {
       
       {/* Navigation items */}
       <div className="relative flex items-stretch justify-around px-2 pb-safe">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
           

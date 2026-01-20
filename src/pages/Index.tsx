@@ -15,6 +15,7 @@ import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 const container = {
   hidden: { opacity: 0 },
@@ -55,6 +56,7 @@ const getRandomMessage = () => {
 };
 
 const Index = () => {
+  const { profile } = useUserAccess();
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
@@ -72,6 +74,7 @@ const Index = () => {
   const currentDate = new Date();
   const formattedDate = format(currentDate, "EEEE, MMMM d, yyyy");
   const greeting = getGreeting();
+  const firstName = (profile?.name ?? "User").split(" ").filter(Boolean)[0] ?? "User";
   
   useDocumentTitle("Dashboard");
 
@@ -163,7 +166,7 @@ const Index = () => {
         <div className="p-6 pb-5">
           <p className="text-sm text-muted-foreground font-medium tracking-wide">{formattedDate}</p>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-2">
-            {greeting}, <span className="text-gradient">Karthik</span>
+            {greeting}, <span className="text-gradient">{firstName}</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-3">
             {getRandomMessage()}

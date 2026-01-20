@@ -195,6 +195,33 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
           canApproveRequests: true,
         };
         break;
+      case "staff":
+        pageAccess = pages.map((page) => ({
+          page: page.id,
+          canView: page.id === "dashboard" || page.id === "tracker" || page.id === "tickets",
+          canEdit: page.id === "tracker" || page.id === "tickets",
+          canDelete: false,
+          canCreate: page.id === "tracker" || page.id === "tickets",
+        }));
+        permissions = {
+          ...defaultPermissions,
+          canExportData: false,
+          canViewReports: false,
+        };
+        break;
+      case "viewer":
+        pageAccess = pages.map((page) => ({
+          page: page.id,
+          canView: page.id === "dashboard" || page.id === "tracker" || page.id === "reports" || page.id === "tickets",
+          canEdit: false,
+          canDelete: false,
+          canCreate: false,
+        }));
+        permissions = {
+          ...defaultPermissions,
+          canViewReports: true,
+        };
+        break;
       case "analyst":
         pageAccess = pages.map((page) => ({
           page: page.id,
@@ -246,23 +273,29 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         });
         return;
       }
-      if (password || confirmPassword) {
-        if (password.length < 8) {
-          toast({
-            title: "Weak Password",
-            description: "Password must be at least 8 characters.",
-            variant: "destructive",
-          });
-          return;
-        }
-        if (password !== confirmPassword) {
-          toast({
-            title: "Password Mismatch",
-            description: "Passwords do not match.",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (!password || !confirmPassword) {
+        toast({
+          title: "Password required",
+          description: "Set a password so the hash is stored in the users table.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (password.length < 8) {
+        toast({
+          title: "Weak Password",
+          description: "Password must be at least 8 characters.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast({
+          title: "Password Mismatch",
+          description: "Passwords do not match.",
+          variant: "destructive",
+        });
+        return;
       }
 
     const { data: currentUserData } = await supabase.auth.getUser();
@@ -371,18 +404,20 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     const { data: sessionData } = await supabase.auth.getSession();
     const currentSession = sessionData.session ?? null;
 
-    if (password) {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password,
-        options: {
-          data: { full_name: formData.name },
-        },
-      });
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: formData.email,
+      password,
+      options: {
+        data: { full_name: formData.name },
+      },
+    });
 
-      if (signUpError) {
-        const message = signUpError.message ?? "";
-        const isRateLimited = /only request this after/i.test(message);
+    if (signUpError) {
+      const message = signUpError.message ?? "";
+      const isRateLimited = /only request this after/i.test(message);
+      const isAlreadyRegistered = /already registered|already exists/i.test(message);
+
+      if (!isAlreadyRegistered) {
         toast({
           title: "Auth user creation failed",
           description: isRateLimited
@@ -392,16 +427,11 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         });
         return;
       }
+    }
 
-      targetAuthUserId = signUpData.user?.id ?? null;
+    targetAuthUserId = signUpData.user?.id ?? null;
 
-      if (currentSession?.access_token && currentSession?.refresh_token) {
-        await supabase.auth.setSession({
-          access_token: currentSession.access_token,
-          refresh_token: currentSession.refresh_token,
-        });
-      }
-    } else {
+    if (!targetAuthUserId) {
       const { data: existingUser, error: existingError } = (await (usersTable
         .select("id, auth_user_id")
         .eq("email", formData.email)
@@ -412,14 +442,21 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
 
       if (existingError || !existingUser || !existingUser.auth_user_id) {
         toast({
-          title: "Password required",
-          description: "Enter a password to create the Auth user, or create the Auth user first in Supabase.",
+          title: "Auth user lookup failed",
+          description: "Create the Auth user in Supabase or retry with a different email.",
           variant: "destructive",
         });
         return;
       }
 
       targetAuthUserId = existingUser.auth_user_id;
+    }
+
+    if (currentSession?.access_token && currentSession?.refresh_token) {
+      await supabase.auth.setSession({
+        access_token: currentSession.access_token,
+        refresh_token: currentSession.refresh_token,
+      });
     }
 
     if (!targetAuthUserId) {
@@ -500,7 +537,10 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       options: { onConflict: string }
     ) => Promise<{ error: PostgrestError | null }>);
 
-    const { error: settingsError } = await upsertSettings({ user_id: targetUserId }, { onConflict: "user_id" });
+    const { error: settingsError } = await upsertSettings(
+      { user_id: targetUserId, user_name: formData.name, user_email: formData.email },
+      { onConflict: "user_id" }
+    );
 
     if (settingsError) {
       toast({
@@ -520,6 +560,8 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     const { error: permissionsError } = await upsertPermissions(
       {
         user_id: targetUserId,
+        user_name: formData.name,
+        user_email: formData.email,
         can_export_data: formData.permissions.canExportData,
         can_import_data: formData.permissions.canImportData,
         can_manage_users: formData.permissions.canManageUsers,
@@ -542,6 +584,8 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
 
     const pageAccessRows = formData.pageAccess.map((access) => ({
       user_id: targetUserId,
+      user_name: formData.name,
+      user_email: formData.email,
       page: access.page,
       can_view: access.canView,
       can_edit: access.canEdit,
