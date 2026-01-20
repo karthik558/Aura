@@ -87,6 +87,8 @@ const pages = [
 const roles = [
   { value: "admin", label: "Administrator", description: "Full system access" },
   { value: "manager", label: "Manager", description: "Team management access" },
+  { value: "staff", label: "Staff", description: "Operational access" },
+  { value: "viewer", label: "Viewer", description: "Read-only access" },
   { value: "analyst", label: "Analyst", description: "View and report access" },
   { value: "user", label: "Standard User", description: "Basic access only" },
 ];
@@ -572,7 +574,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
       title: "User Created",
       description: `${formData.name} has been added successfully.`,
     });
-    handleClose();
+    handleOpenChange(false);
     } finally {
       setIsSubmitting(false);
     }

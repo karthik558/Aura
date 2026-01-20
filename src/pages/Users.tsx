@@ -130,6 +130,8 @@ const getInitials = (name: string) => {
 const roleConfig = {
   admin: { label: "Admin", icon: ShieldCheck, className: "bg-danger/10 text-danger" },
   manager: { label: "Manager", icon: Shield, className: "bg-primary/10 text-primary" },
+  staff: { label: "Staff", icon: Shield, className: "bg-secondary/10 text-secondary-foreground" },
+  viewer: { label: "Viewer", icon: Eye, className: "bg-muted text-muted-foreground" },
   analyst: { label: "Analyst", icon: Eye, className: "bg-warning/10 text-warning" },
   user: { label: "User", icon: Eye, className: "bg-muted text-muted-foreground" },
 };
@@ -234,6 +236,14 @@ const Users = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!currentAuthUserId || isAdmin) return;
+    const me = users.find((u) => u.authUserId === currentAuthUserId);
+    if (me?.role === "admin") {
+      setIsAdmin(true);
+    }
+  }, [currentAuthUserId, isAdmin, users]);
+
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -244,11 +254,10 @@ const Users = () => {
   };
 
   const openUserDialog = (user: UserData, mode: "view" | "edit") => {
-    const normalizedRole = (user.role === "staff" || user.role === "viewer") ? "user" : user.role;
     setActiveUser(user);
     setUserDialogMode(mode);
     setEditForm({
-      role: normalizedRole,
+      role: user.role,
       department: user.department,
       status: user.status,
     });
@@ -605,6 +614,8 @@ const Users = () => {
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
                         <SelectItem value="analyst">Analyst</SelectItem>
                         <SelectItem value="user">User</SelectItem>
                       </SelectContent>
