@@ -71,6 +71,7 @@ import { toast } from "sonner";
 import { Permit, statusConfig } from "@/data/permits";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 const statusConfigWithIcons = {
   pending: { ...statusConfig.pending, icon: Clock },
@@ -106,12 +107,28 @@ const Tracker = () => {
     passportNo: "",
     status: "pending" as Permit["status"],
   });
+  const { profile } = useUserAccess();
 
   const formatUserLabel = (name?: string | null, email?: string | null, fallback?: string | null) => {
     if (name && email) return `${name} (${email})`;
     if (name) return name;
     if (email) return email;
     return fallback ?? "";
+  };
+
+  const actorMeta = useMemo(
+    () => ({ user_name: profile?.name ?? null, user_email: profile?.email ?? null }),
+    [profile?.name, profile?.email]
+  );
+
+  const insertPermitHistory = async (permitDbId: string | undefined, action: string) => {
+    if (!permitDbId) return;
+    await supabase.from("permit_history").insert({
+      permit_id: permitDbId,
+      action,
+      action_by: currentUserId,
+      metadata: actorMeta,
+    });
   };
   
   useDocumentTitle("Tracker");
@@ -221,6 +238,8 @@ const Tracker = () => {
       trackingHistory: [],
     };
 
+    await insertPermitHistory(data.id, "Permit created");
+
     setPermits(prev => [createdPermit, ...prev]);
     setIsAddPermitOpen(false);
     setNewPermit({
@@ -281,6 +300,17 @@ const Tracker = () => {
       trackingHistory: [],
     }));
 
+    await supabase.from("permit_history").insert(
+      mappedPermits
+        .filter((permit) => permit.dbId)
+        .map((permit) => ({
+          permit_id: permit.dbId,
+          action: "Permit created (import)",
+          action_by: currentUserId,
+          metadata: actorMeta,
+        }))
+    );
+
     setPermits((prev) => [...mappedPermits, ...prev]);
     toast.success(`Imported ${mappedPermits.length} permits`);
   };
@@ -311,6 +341,7 @@ const Tracker = () => {
   };
 
   const handlePermitSave = async (updatedPermit: Permit) => {
+    const previousPermit = permits.find((p) => p.id === updatedPermit.id);
     const targetId = updatedPermit.dbId ?? updatedPermit.permitCode ?? updatedPermit.id;
     const permitsTable = supabase.from("permits") as any;
     const { data, error } = await permitsTable
@@ -330,8 +361,13 @@ const Tracker = () => {
       .single();
 
     if (error) {
-      toast.error("Failed to update permit", { description: error.message });
-      return;
+      const isPermissionIssue = error.message.toLowerCase().includes("cannot coerce the result to a single json object");
+      if (isPermissionIssue) {
+        toast.error("Permission denied", { description: "You do not have access to edit this permit." });
+      } else {
+        toast.error("Failed to update permit", { description: error.message });
+      }
+      return false;
     }
 
     if (data) {
@@ -356,11 +392,22 @@ const Tracker = () => {
       };
       setPermits((prev) => prev.map((p) => (p.id === updatedPermit.id ? mappedPermit : p)));
       setDetailViewPermit(mappedPermit);
-      return;
+      const statusLabels = {
+        pending: "Pending",
+        approved: "Approved",
+        rejected: "Rejected",
+        uploaded: "Uploaded",
+      };
+      const action = previousPermit && previousPermit.status !== data.status
+        ? `Status updated to ${statusLabels[data.status]}`
+        : "Permit details updated";
+      await insertPermitHistory(data.id, action);
+      return true;
     }
 
     setPermits((prev) => prev.map((p) => (p.id === updatedPermit.id ? updatedPermit : p)));
     setDetailViewPermit(updatedPermit);
+    return true;
   };
 
   const handleDeletePermit = async (permit: Permit) => {
@@ -412,6 +459,7 @@ const Tracker = () => {
         status: newStatus,
         uploaded: newStatus === 'uploaded',
         last_updated_at: nowIso,
+        updated_by: currentUserId,
       })
       .eq(targetColumn, targetId);
 
@@ -427,15 +475,13 @@ const Tracker = () => {
           status: newStatus,
           uploaded: newStatus === 'uploaded',
           lastUpdated: format(new Date(), 'yyyy-MM-dd HH:mm'),
-          updatedBy: 'Current User',
-          trackingHistory: [
-            { date: format(new Date(), 'yyyy-MM-dd HH:mm'), action: `Status updated to ${statusLabels[newStatus]}`, by: 'Current User' },
-            ...p.trackingHistory
-          ]
+          updatedBy: formatUserLabel(profile?.name, profile?.email, p.updatedBy)
         };
       }
       return p;
     }));
+
+    await insertPermitHistory(targetPermit?.dbId ?? undefined, `Status updated to ${statusLabels[newStatus]}`);
 
     toast.success(`Status updated to ${statusLabels[newStatus]}`);
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import {
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 interface TrackingEntry {
   date: string;
@@ -47,6 +49,7 @@ interface TrackingEntry {
 
 interface Permit {
   id: string;
+  dbId?: string;
   guestName: string;
   arrivalDate: string;
   departureDate: string;
@@ -62,7 +65,7 @@ interface Permit {
 interface PermitDetailViewProps {
   permit: Permit;
   onClose: () => void;
-  onSave: (permit: Permit) => void;
+  onSave: (permit: Permit) => Promise<boolean>;
 }
 
 const statusConfig = {
@@ -73,6 +76,7 @@ const statusConfig = {
 };
 
 export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewProps) {
+  const { isAdmin, pageAccess } = useUserAccess();
   const [isEditing, setIsEditing] = useState(false);
   const [editedPermit, setEditedPermit] = useState<Permit>(permit);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
   const [departureDate, setDepartureDate] = useState<Date | undefined>(
     permit.departureDate ? new Date(permit.departureDate) : undefined
   );
+  const [history, setHistory] = useState<TrackingEntry[]>(permit.trackingHistory ?? []);
 
   const handleCopy = async (value: string, field: string) => {
     try {
@@ -94,25 +99,54 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updatedPermit: Permit = {
       ...editedPermit,
       arrivalDate: arrivalDate ? format(arrivalDate, "yyyy-MM-dd") : editedPermit.arrivalDate,
       departureDate: departureDate ? format(departureDate, "yyyy-MM-dd") : editedPermit.departureDate,
       lastUpdated: format(new Date(), "yyyy-MM-dd HH:mm"),
-      updatedBy: "Current User",
-      trackingHistory: [
-        {
-          date: format(new Date(), "yyyy-MM-dd HH:mm"),
-          action: "Permit details updated",
-          by: "Current User"
-        },
-        ...editedPermit.trackingHistory
-      ]
+      trackingHistory: editedPermit.trackingHistory,
     };
-    onSave(updatedPermit);
-    setIsEditing(false);
-    toast.success("Permit updated successfully");
+    const ok = await onSave(updatedPermit);
+    if (ok) {
+      setIsEditing(false);
+      toast.success("Permit updated successfully");
+    }
+  };
+
+  const handleMarkUploaded = async () => {
+    const updatedPermit: Permit = {
+      ...editedPermit,
+      status: "uploaded",
+      uploaded: true,
+      lastUpdated: format(new Date(), "yyyy-MM-dd HH:mm"),
+    };
+    const ok = await onSave(updatedPermit);
+    if (ok) {
+      setEditedPermit(updatedPermit);
+      toast.success("Marked as uploaded");
+    }
+  };
+
+  const handleCopyAllDetails = async () => {
+    const details = [
+      `Permit: ${editedPermit.id}`,
+      `Guest: ${editedPermit.guestName}`,
+      `Arrival: ${editedPermit.arrivalDate}`,
+      `Departure: ${editedPermit.departureDate}`,
+      `Nationality: ${editedPermit.nationality}`,
+      `Passport: ${editedPermit.passportNo}`,
+      `Status: ${statusConfig[editedPermit.status].label}`,
+      `Last Updated: ${lastEntry?.date ?? editedPermit.lastUpdated}`,
+      `Updated By: ${lastEntry?.by ?? editedPermit.updatedBy}`,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(details);
+      toast.success("Permit details copied");
+    } catch {
+      toast.error("Failed to copy details");
+    }
   };
 
   const handleCancel = () => {
@@ -121,6 +155,50 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
     setDepartureDate(permit.departureDate ? new Date(permit.departureDate) : undefined);
     setIsEditing(false);
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadHistory = async () => {
+      if (!permit.dbId) {
+        setHistory(permit.trackingHistory ?? []);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("permit_history")
+        .select("action, action_at, metadata")
+        .eq("permit_id", permit.dbId)
+        .order("action_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (error) {
+        setHistory(permit.trackingHistory ?? []);
+        return;
+      }
+
+      const mapped = (data ?? []).map((entry) => ({
+        action: entry.action,
+        date: format(new Date(entry.action_at), "yyyy-MM-dd HH:mm"),
+        by: (entry.metadata as { user_name?: string; user_email?: string } | null)?.user_name
+          ?? (entry.metadata as { user_name?: string; user_email?: string } | null)?.user_email
+          ?? "System",
+      }));
+
+      setHistory(mapped);
+    };
+
+    loadHistory();
+    return () => {
+      isMounted = false;
+    };
+  }, [permit.dbId, permit.trackingHistory]);
+
+  const createdEntry = useMemo(() => {
+    return history.find((entry) => entry.action.toLowerCase().includes("created"));
+  }, [history]);
+
+  const lastEntry = history[0];
 
   const StatusIcon = statusConfig[editedPermit.status].icon;
 
@@ -178,7 +256,19 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                 </Button>
               </>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const canEdit = isAdmin || Boolean(pageAccess["tracker"]?.canEdit);
+                  if (!canEdit) {
+                    toast.error("Permission denied", { description: "You do not have access to edit this permit." });
+                    return;
+                  }
+                  setIsEditing(true);
+                }}
+                className="gap-2"
+              >
                 <Edit className="w-4 h-4" />
                 Edit
               </Button>
@@ -391,11 +481,21 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                 Quick Actions
               </h2>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start gap-2" size="sm">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  size="sm"
+                  onClick={handleMarkUploaded}
+                >
                   <Upload className="w-4 h-4" />
                   Mark as Uploaded
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2" size="sm">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  size="sm"
+                  onClick={handleCopyAllDetails}
+                >
                   <Copy className="w-4 h-4" />
                   Copy All Details
                 </Button>
@@ -410,14 +510,14 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
               </h2>
               
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {editedPermit.trackingHistory.map((entry, index) => (
+                {history.map((entry, index) => (
                   <div key={index} className="flex gap-3">
                     <div className="flex flex-col items-center">
                       <div className={cn(
                         "w-2.5 h-2.5 rounded-full mt-1",
                         index === 0 ? "bg-primary" : "bg-muted-foreground/30"
                       )} />
-                      {index < editedPermit.trackingHistory.length - 1 && (
+                      {index < history.length - 1 && (
                         <div className="w-px flex-1 bg-border mt-1" />
                       )}
                     </div>
@@ -437,8 +537,11 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             <div className="bg-card rounded-xl border border-border p-5">
               <h2 className="font-medium text-foreground mb-4">Last Updated</h2>
               <div className="text-sm">
-                <p className="text-muted-foreground">{editedPermit.lastUpdated}</p>
-                <p className="text-muted-foreground">by {editedPermit.updatedBy}</p>
+                <p className="text-muted-foreground">{lastEntry?.date ?? editedPermit.lastUpdated}</p>
+                <p className="text-muted-foreground">by {lastEntry?.by ?? editedPermit.updatedBy}</p>
+                {createdEntry && (
+                  <p className="text-muted-foreground">Added by {createdEntry.by}</p>
+                )}
               </div>
             </div>
           </motion.div>

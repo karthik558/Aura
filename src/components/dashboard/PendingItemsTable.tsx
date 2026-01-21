@@ -12,6 +12,7 @@ import { Permit } from "@/data/permits";
 import { differenceInDays, format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 const statusOptions = [
   { value: "pending", label: "Pending", className: "badge-pending", icon: Clock },
@@ -132,6 +133,7 @@ function MobileStatusUpdatePopover({ currentStatus, itemId, onStatusChange }: St
 export function PendingItemsTable() {
   const [permits, setPermits] = useState<Permit[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { profile } = useUserAccess();
 
   useEffect(() => {
     let isMounted = true;
@@ -245,13 +247,22 @@ export function PendingItemsTable() {
         status: newStatus,
         uploaded: newStatus === 'uploaded',
         lastUpdated: format(new Date(), 'yyyy-MM-dd HH:mm'),
-        updatedBy: 'Current User',
+        updatedBy: profile?.name && profile?.email ? `${profile.name} (${profile.email})` : (profile?.name || profile?.email || 'Current User'),
         trackingHistory: [
-          { date: format(new Date(), 'yyyy-MM-dd HH:mm'), action: `Status updated to ${statusLabels[newStatus]}`, by: 'Current User' },
+          { date: format(new Date(), 'yyyy-MM-dd HH:mm'), action: `Status updated to ${statusLabels[newStatus]}`, by: profile?.name || profile?.email || 'Current User' },
           ...permit.trackingHistory
         ]
       } : permit
     ));
+
+    if (targetPermit?.dbId) {
+      await supabase.from("permit_history").insert({
+        permit_id: targetPermit.dbId,
+        action: `Status updated to ${statusLabels[newStatus]}`,
+        action_by: currentUserId,
+        metadata: { user_name: profile?.name ?? null, user_email: profile?.email ?? null },
+      });
+    }
 
     toast.success(`Status updated to ${statusLabels[newStatus]}`);
   };
