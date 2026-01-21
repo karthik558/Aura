@@ -25,7 +25,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           cancelButton: 
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-lg group-[.toast]:font-medium",
           success:
-            "group-[.toaster]:!bg-gradient-to-r group-[.toaster]:!from-success/15 group-[.toaster]:!to-success/5 group-[.toaster]:!border-success/30 group-[.toaster]:!text-success-foreground [&>svg]:!text-success",
+            "group-[.toaster]:!bg-card group-[.toaster]:!text-foreground group-[.toaster]:!border-success/40 group-[.toaster]:!shadow-none [&>svg]:!text-success",
           error:
             "group-[.toaster]:!bg-gradient-to-r group-[.toaster]:!from-destructive/15 group-[.toaster]:!to-destructive/5 group-[.toaster]:!border-destructive/30 group-[.toaster]:!text-destructive [&>svg]:!text-destructive",
           warning:
