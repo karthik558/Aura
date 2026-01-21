@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, X, Clock, FileText, User, Ticket, ArrowRight } from "lucide-react";
+import { Search, X, Clock, FileText, User, Ticket, ArrowRight, Menu, LayoutDashboard, ClipboardList, FileBarChart, Settings, LogOut, Moon, Sun, Activity, Bell, Check, AlertTriangle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,22 @@ import auraLogo from "@/assets/aura-logo.png";
 import { useUserAccess } from "@/context/UserAccessContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface SearchResult {
   id: string;
@@ -32,6 +48,15 @@ const pageResults: SearchResult[] = [
   { id: "page-reports", title: "Reports", subtitle: "Generate and view reports", type: "page", path: "/reports" },
   { id: "page-tickets", title: "Tickets", subtitle: "Support and requests", type: "page", path: "/tickets" },
   { id: "page-settings", title: "Settings", subtitle: "Preferences and configuration", type: "page", path: "/settings" },
+];
+
+const mobileNavItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", pageId: "dashboard" },
+  { icon: ClipboardList, label: "Tracker", path: "/tracker", pageId: "tracker" },
+  { icon: FileBarChart, label: "Reports", path: "/reports", pageId: "reports" },
+  { icon: Ticket, label: "Tickets", path: "/tickets", pageId: "tickets" },
+  { icon: Activity, label: "System Status", path: "/system-status", pageId: "system-status" },
+  { icon: Settings, label: "Settings", path: "/settings", pageId: "settings" },
 ];
 
 const getResultIcon = (type: SearchResult["type"]) => {
@@ -54,8 +79,83 @@ export function Header({ stickyHeader = true }: HeaderProps) {
   const [permitResults, setPermitResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Tables<"notifications">[]>([]);
   const navigate = useNavigate();
-  const { canViewPage } = useUserAccess();
+  const { canViewPage, profile } = useUserAccess();
+  const { theme, setTheme } = useTheme();
+
+  const displayName = profile?.name ?? "User";
+  const roleLabel = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : "User";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const loadNotifications = useCallback(async () => {
+    if (!profile?.authUserId) {
+      setNotifications([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id, user_id, title, message, type, read, created_at")
+      .eq("user_id", profile.authUserId)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setNotifications(data ?? []);
+    }
+  }, [profile?.authUserId]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const markAsRead = async (id: string) => {
+    if (!profile?.authUserId) return;
+
+    const { error } = await (supabase
+      .from("notifications") as any)
+      .update({ read: true })
+      .eq("id", id)
+      .eq("user_id", profile.authUserId);
+
+    if (!error) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    }
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = Date.now();
+    const then = new Date(timestamp).getTime();
+    const diffSeconds = Math.max(0, Math.floor((now - then) / 1000));
+
+    if (diffSeconds < 60) return `${diffSeconds}s ago`;
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const getNotificationIcon = (type: string | null) => {
+    switch (type) {
+      case "warning":
+        return <AlertTriangle className="w-4 h-4 text-warning" />;
+      case "success":
+        return <Check className="w-4 h-4 text-success" />;
+      default:
+        return <Bell className="w-4 h-4 text-primary" />;
+    }
+  };
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -170,6 +270,11 @@ export function Header({ stickyHeader = true }: HeaderProps) {
     setSearchQuery(search);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth", { replace: true });
+  };
+
   // Reset selected index when results change
   useEffect(() => {
     setSelectedIndex(0);
@@ -182,14 +287,68 @@ export function Header({ stickyHeader = true }: HeaderProps) {
         stickyHeader ? "sticky top-0" : "relative"
       )}>
         <div className="flex items-center h-14 px-4 lg:px-6">
-          {/* Mobile: Logo */}
-          <Link to="/" className="flex items-center gap-3 lg:hidden">
-            <img 
-              src={auraLogo} 
-              alt="Aura" 
-              className="h-5 w-auto logo-accent"
-            />
-          </Link>
+          {/* Mobile: Sidebar + Search */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                  <Menu className="w-4 h-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-[86%] max-w-sm">
+                <div className="h-full flex flex-col">
+                  <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/60">
+                    <SheetTitle className="flex items-center gap-3">
+                      <img src={auraLogo} alt="Aura" className="h-6 w-auto logo-accent" />
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto px-4 py-4">
+                    <div className="space-y-1.5">
+                      {mobileNavItems
+                        .filter((item) => canViewPage(item.pageId))
+                        .map((item) => (
+                          <button
+                            key={item.path}
+                            onClick={() => {
+                              navigate(item.path);
+                              setMobileSidebarOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                          >
+                            <item.icon className="w-4 h-4" />
+                            <span className="font-medium">{item.label}</span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                  <div className="border-t border-border/60 px-4 py-4">
+                    <div className="flex items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2">
+                      <Avatar className="w-9 h-9 ring-2 ring-border">
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                          {initials || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{displayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout}>
+                        <LogOut className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="w-4 h-4" />
+            </Button>
+          </div>
 
           {/* Desktop: Search Trigger */}
           <div className="hidden lg:flex flex-1 max-w-md">
@@ -209,15 +368,106 @@ export function Header({ stickyHeader = true }: HeaderProps) {
             </button>
           </div>
 
-          {/* Mobile: Search Trigger */}
-          <div className="flex-1 flex justify-end lg:hidden">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 h-9 px-3 bg-card border border-border/60 rounded-xl text-xs text-muted-foreground shadow-soft"
+          {/* Mobile: Center Logo */}
+          <div className="flex-1 flex justify-center lg:hidden">
+            <Link to="/" className="flex items-center">
+              <img
+                src={auraLogo}
+                alt="Aura"
+                className="h-5 w-auto logo-accent"
+              />
+            </Link>
+          </div>
+
+          {/* Mobile: Notifications + Theme + Avatar */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl relative">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[1rem] px-1 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">Notifications</p>
+                  <p className="text-xs text-muted-foreground">
+                    {notifications.length === 0
+                      ? "You're all caught up."
+                      : `${unreadCount} unread`}
+                  </p>
+                </div>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <DropdownMenuItem disabled>No new notifications</DropdownMenuItem>
+                ) : (
+                  notifications.slice(0, 6).map((notification) => (
+                    <DropdownMenuItem
+                      key={notification.id}
+                      onClick={() => markAsRead(notification.id)}
+                      className="items-start gap-2"
+                    >
+                      <div className="mt-0.5">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium leading-4">
+                          {notification.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {notification.message}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {formatTimeAgo(notification.created_at)}
+                        </p>
+                      </div>
+                      {!notification.read && (
+                        <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             >
-              <Search className="w-4 h-4" />
-              <span>Search permits, guests...</span>
-            </button>
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
+                  <Avatar className="w-7 h-7 ring-2 ring-border">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                      {initials || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-muted-foreground">{roleLabel}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/settings")}> 
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
