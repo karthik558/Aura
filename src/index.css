@@ -199,7 +199,7 @@
   }
 
   .data-table.capitalize th {
-    @apply capitalize tracking-normal;
+    @apply tracking-normal;
   }
   
   .data-table td {

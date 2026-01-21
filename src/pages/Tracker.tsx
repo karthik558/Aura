@@ -926,27 +926,27 @@ const Tracker = () => {
                     onClick={() => handleSort("name")} 
                     className="flex items-center hover:text-foreground transition-colors"
                   >
-                    Name <SortIcon field="name" />
+                    NAME <SortIcon field="name" />
                   </button>
                 </th>
-                <th>Confirmation #</th>
+                <th>CONFIRMATION #</th>
                 <th>
                   <button 
                     onClick={() => handleSort("arrivalDate")} 
                     className="flex items-center hover:text-foreground transition-colors"
                   >
-                    Arrival <SortIcon field="arrivalDate" />
+                    ARRIVAL <SortIcon field="arrivalDate" />
                   </button>
                 </th>
-                <th>Departure</th>
-                <th>Adults</th>
-                <th>Property</th>
+                <th>DEPARTURE</th>
+                <th>ADULTS</th>
+                <th>PROPERTY</th>
                 <th>
                   <button 
                     onClick={() => handleSort("status")} 
                     className="flex items-center hover:text-foreground transition-colors"
                   >
-                    Status <SortIcon field="status" />
+                    STATUS <SortIcon field="status" />
                   </button>
                 </th>
                 <th>
@@ -954,10 +954,10 @@ const Tracker = () => {
                     onClick={() => handleSort("lastUpdated")} 
                     className="flex items-center hover:text-foreground transition-colors"
                   >
-                    Updated <SortIcon field="lastUpdated" />
+                    UPDATED <SortIcon field="lastUpdated" />
                   </button>
                 </th>
-                <th>Actions</th>
+                <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
