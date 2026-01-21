@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import auraLogo from "@/assets/aura-logo.png";
+import { useUserAccess } from "@/context/UserAccessContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -23,11 +24,7 @@ interface SearchResult {
   permitId?: string;
 }
 
-const mockRecentSearches = [
-  "Guest permit renewal",
-  "Expired permits",
-  "John Smith",
-];
+const RECENT_SEARCHES_KEY = "aura_recent_searches";
 
 const pageResults: SearchResult[] = [
   { id: "page-dashboard", title: "Dashboard", subtitle: "View analytics and overview", type: "page", path: "/" },
@@ -56,7 +53,9 @@ export function Header({ stickyHeader = true }: HeaderProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [permitResults, setPermitResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const navigate = useNavigate();
+  const { canViewPage } = useUserAccess();
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -121,6 +120,19 @@ export function Header({ stickyHeader = true }: HeaderProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as string[];
+      if (Array.isArray(parsed)) {
+        setRecentSearches(parsed.slice(0, 5));
+      }
+    } catch {
+      setRecentSearches([]);
+    }
+  }, []);
+
   // Handle keyboard navigation in results
   const handleKeyNavigation = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
@@ -140,6 +152,11 @@ export function Header({ stickyHeader = true }: HeaderProps) {
   }, [filteredResults, selectedIndex, navigate]);
 
   const handleResultClick = (result: SearchResult) => {
+    if (searchQuery.trim()) {
+      const next = [searchQuery.trim(), ...recentSearches.filter((item) => item !== searchQuery.trim())].slice(0, 5);
+      setRecentSearches(next);
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+    }
     if (result.type === "permit" && result.permitId) {
       navigate(result.path, { state: { openPermitId: result.permitId } });
     } else {
@@ -245,41 +262,49 @@ export function Header({ stickyHeader = true }: HeaderProps) {
                   exit={{ opacity: 0 }}
                   className="p-3"
                 >
-                  <p className="text-xs font-medium text-muted-foreground px-2 mb-2">Recent Searches</p>
-                  <div className="space-y-1">
-                    {mockRecentSearches.map((search, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleRecentSearchClick(search)}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span>{search}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {recentSearches.length > 0 && (
+                    <>
+                      <p className="text-xs font-medium text-muted-foreground px-2 mb-2">Recent Searches</p>
+                      <div className="space-y-1">
+                        {recentSearches.map((search, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleRecentSearchClick(search)}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span>{search}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
                   <div className="border-t border-border mt-3 pt-3">
                     <p className="text-xs font-medium text-muted-foreground px-2 mb-2">Quick Links</p>
                     <div className="grid grid-cols-2 gap-1">
                       {[
-                        { label: "Dashboard", path: "/" },
-                        { label: "Tracker", path: "/tracker" },
-                        { label: "Reports", path: "/reports" },
-                        { label: "Settings", path: "/settings" },
-                      ].map((link) => (
-                        <button
-                          key={link.path}
-                          onClick={() => {
-                            navigate(link.path);
-                            setSearchOpen(false);
-                          }}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted/50 transition-colors text-left"
-                        >
-                          <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                          <span>{link.label}</span>
-                        </button>
-                      ))}
+                        { label: "Dashboard", path: "/", pageId: "dashboard" },
+                        { label: "Tracker", path: "/tracker", pageId: "tracker" },
+                        { label: "Reports", path: "/reports", pageId: "reports" },
+                        { label: "Tickets", path: "/tickets", pageId: "tickets" },
+                        { label: "Settings", path: "/settings", pageId: "settings" },
+                        { label: "System Status", path: "/system-status", pageId: "system-status" },
+                      ]
+                        .filter((link) => canViewPage(link.pageId))
+                        .map((link) => (
+                          <button
+                            key={link.path}
+                            onClick={() => {
+                              navigate(link.path);
+                              setSearchOpen(false);
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-muted/50 transition-colors text-left"
+                          >
+                            <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                            <span>{link.label}</span>
+                          </button>
+                        ))}
                     </div>
                   </div>
                 </motion.div>
