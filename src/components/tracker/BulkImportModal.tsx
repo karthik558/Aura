@@ -32,10 +32,19 @@ interface ImportResult {
   errors: ImportError[];
 }
 
+export type ImportedPermitRow = {
+  guestName: string;
+  arrivalDate: string;
+  departureDate: string;
+  nationality?: string;
+  passportNo?: string;
+  status: "pending" | "approved" | "rejected" | "uploaded";
+};
+
 interface BulkImportModalProps {
   open: boolean;
   onClose: () => void;
-  onImportComplete: (data: any[]) => void;
+  onImportComplete: (data: ImportedPermitRow[]) => void;
 }
 
 type ImportStatus = "idle" | "uploading" | "processing" | "complete" | "error";
@@ -195,7 +204,7 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
 
       // Validate and process data
       const errors: ImportError[] = [];
-      const validData: any[] = [];
+      const validData: ImportedPermitRow[] = [];
 
       for (let i = 0; i < parsedData.length; i++) {
         const row = parsedData[i];
@@ -209,6 +218,10 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
         // Basic validation
         const guestName = row.guestName || row.guest_name || row.GuestName || row.name || row.Name;
         const arrivalDate = row.arrivalDate || row.arrival_date || row.ArrivalDate || row.date || row.Date;
+        const departureDate = row.departureDate || row.departure_date || row.DepartureDate || row.endDate || row.EndDate;
+        const nationality = row.nationality || row.Nationality || "";
+        const passportNo = row.passportNo || row.passport_no || row.PassportNo || "";
+        const status = (row.status || row.Status || "pending") as ImportedPermitRow["status"];
 
         if (!guestName) {
           errors.push({ row: i + 2, message: "Missing guest name" });
@@ -220,14 +233,18 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
           continue;
         }
 
+        if (!departureDate) {
+          errors.push({ row: i + 2, message: "Missing departure date" });
+          continue;
+        }
+
         validData.push({
-          id: `PRM-${String(Date.now() + i).slice(-6)}`,
           guestName: guestName,
           arrivalDate: arrivalDate,
-          status: "pending",
-          uploaded: false,
-          lastUpdated: new Date().toISOString().slice(0, 16).replace('T', ' '),
-          updatedBy: "Import"
+          departureDate: departureDate,
+          nationality,
+          passportNo,
+          status,
         });
       }
 

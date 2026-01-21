@@ -62,7 +62,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TableSkeleton } from "@/components/skeletons/DashboardSkeleton";
-import { BulkImportModal } from "@/components/tracker/BulkImportModal";
+import { BulkImportModal, type ImportedPermitRow } from "@/components/tracker/BulkImportModal";
 import { PermitDetailView } from "@/components/tracker/PermitDetailView";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { cn } from "@/lib/utils";
@@ -163,12 +163,9 @@ const Tracker = () => {
       return;
     }
 
-    const permitCode = newPermit.permitCode || `PRM-${Date.now()}`;
-
     const permitsTable = supabase.from("permits") as any;
     const { data, error } = await permitsTable
       .insert({
-        permit_code: permitCode,
         guest_name: newPermit.guestName,
         arrival_date: newPermit.arrivalDate,
         departure_date: newPermit.departureDate,
@@ -223,8 +220,50 @@ const Tracker = () => {
     toast.success("Permit created");
   };
 
-  const handleImportComplete = (importedData: Permit[]) => {
-    setPermits(prev => [...importedData, ...prev]);
+  const handleImportComplete = async (importedData: ImportedPermitRow[]) => {
+    if (!importedData.length) return;
+
+    const permitsTable = supabase.from("permits") as any;
+    const { data, error } = await permitsTable
+      .insert(
+        importedData.map((row) => ({
+          guest_name: row.guestName,
+          arrival_date: row.arrivalDate,
+          departure_date: row.departureDate,
+          nationality: row.nationality ?? null,
+          passport_no: row.passportNo ?? null,
+          status: row.status,
+          uploaded: row.status === "uploaded",
+          created_by: currentUserId,
+          updated_by: currentUserId,
+          last_updated_at: new Date().toISOString(),
+        }))
+      )
+      .select();
+
+    if (error) {
+      toast.error("Bulk import failed", { description: error.message });
+      return;
+    }
+
+    const mappedPermits: Permit[] = ((data ?? []) as Tables<"permits">[]).map((permit) => ({
+      id: permit.permit_code ?? permit.id,
+      dbId: permit.id,
+      permitCode: permit.permit_code ?? undefined,
+      guestName: permit.guest_name,
+      arrivalDate: permit.arrival_date,
+      departureDate: permit.departure_date,
+      nationality: permit.nationality ?? "",
+      passportNo: permit.passport_no ?? "",
+      status: permit.status,
+      uploaded: permit.uploaded,
+      lastUpdated: permit.last_updated_at ?? permit.updated_at,
+      updatedBy: "Import",
+      trackingHistory: [],
+    }));
+
+    setPermits((prev) => [...mappedPermits, ...prev]);
+    toast.success(`Imported ${mappedPermits.length} permits`);
   };
 
   const handleSort = (field: SortField) => {
@@ -484,9 +523,10 @@ const Tracker = () => {
               <Label htmlFor="permitCode">Permit Code</Label>
               <Input
                 id="permitCode"
-                value={newPermit.permitCode}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, permitCode: e.target.value }))}
-                placeholder="PRM-001"
+                  value={newPermit.permitCode}
+                  placeholder="Auto-generated"
+                  readOnly
+                  disabled
               />
             </div>
             <div className="space-y-1.5">
