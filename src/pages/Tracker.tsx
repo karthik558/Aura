@@ -279,6 +279,37 @@ const Tracker = () => {
     setDetailViewPermit(updatedPermit);
   };
 
+  const handleDeletePermit = async (permit: Permit) => {
+    const targetId = permit.dbId ?? permit.permitCode ?? permit.id;
+    if (!targetId) {
+      toast.error("Unable to delete permit", { description: "Missing permit identifier." });
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete permit ${permit.permitCode ?? permit.id}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    const permitsTable = supabase.from("permits") as any;
+    const query = permit.dbId
+      ? permitsTable.delete().eq("id", permit.dbId)
+      : permitsTable.delete().eq("permit_code", permit.permitCode ?? permit.id);
+
+    const { error } = await query;
+    if (error) {
+      toast.error("Failed to delete permit", { description: error.message });
+      return;
+    }
+
+    setPermits((prev) => prev.filter((p) => p.id !== permit.id));
+    if (detailViewPermit?.id === permit.id) {
+      setDetailViewPermit(null);
+    }
+    if (selectedPermit?.id === permit.id) {
+      setSelectedPermit(null);
+    }
+    toast.success("Permit deleted");
+  };
+
   const handleStatusUpdate = async (permitId: string, newStatus: Permit['status']) => {
     const statusLabels = {
       pending: 'Pending',
@@ -844,7 +875,13 @@ const Tracker = () => {
                               {permit.status === 'uploaded' && <Check className="w-4 h-4 ml-auto" />}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePermit(permit);
+                              }}
+                            >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -943,7 +980,15 @@ const Tracker = () => {
                       <DropdownMenuItem onClick={() => setDetailViewPermit(permit)}><Edit className="w-4 h-4 mr-2" /> Edit</DropdownMenuItem>
                       <DropdownMenuItem><Upload className="w-4 h-4 mr-2" /> Upload</DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive"><Trash2 className="w-4 h-4 mr-2" /> Delete</DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePermit(permit);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
