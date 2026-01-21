@@ -468,6 +468,9 @@ const Tracker = () => {
     uploaded: permits.filter(p => p.status === "uploaded").length,
   }), [permits]);
 
+  const arrivalDateValue = newPermit.arrivalDate ? new Date(newPermit.arrivalDate) : undefined;
+  const departureDateValue = newPermit.departureDate ? new Date(newPermit.departureDate) : undefined;
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1 opacity-50" />;
     return sortDirection === "asc" 
@@ -540,21 +543,63 @@ const Tracker = () => {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="arrivalDate">Arrival Date *</Label>
-              <Input
-                id="arrivalDate"
-                type="date"
-                value={newPermit.arrivalDate}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, arrivalDate: e.target.value }))}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-between text-left font-normal",
+                      !arrivalDateValue && "text-muted-foreground"
+                    )}
+                  >
+                    {arrivalDateValue ? format(arrivalDateValue, "MMM d, yyyy") : "Select date"}
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={arrivalDateValue}
+                    onSelect={(date) =>
+                      setNewPermit((prev) => ({
+                        ...prev,
+                        arrivalDate: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="departureDate">Departure Date *</Label>
-              <Input
-                id="departureDate"
-                type="date"
-                value={newPermit.departureDate}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, departureDate: e.target.value }))}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-between text-left font-normal",
+                      !departureDateValue && "text-muted-foreground"
+                    )}
+                  >
+                    {departureDateValue ? format(departureDateValue, "MMM d, yyyy") : "Select date"}
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={departureDateValue}
+                    onSelect={(date) =>
+                      setNewPermit((prev) => ({
+                        ...prev,
+                        departureDate: date ? format(date, "yyyy-MM-dd") : "",
+                      }))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="nationality">Nationality</Label>
@@ -669,17 +714,17 @@ const Tracker = () => {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("h-9 gap-2 text-xs", dateFrom && "text-foreground")}>
-                  <CalendarIcon className="w-3.5 h-3.5" />
+                  <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
                   {dateFrom ? format(dateFrom, "MMM d, yyyy") : "From Date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
                 <Calendar
                   mode="single"
                   selected={dateFrom}
                   onSelect={setDateFrom}
                   initialFocus
-                  className="p-3 pointer-events-auto"
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -688,17 +733,17 @@ const Tracker = () => {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className={cn("h-9 gap-2 text-xs", dateTo && "text-foreground")}>
-                  <CalendarIcon className="w-3.5 h-3.5" />
+                  <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
                   {dateTo ? format(dateTo, "MMM d, yyyy") : "To Date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
                 <Calendar
                   mode="single"
                   selected={dateTo}
                   onSelect={setDateTo}
                   initialFocus
-                  className="p-3 pointer-events-auto"
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>

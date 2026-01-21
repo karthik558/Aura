@@ -571,7 +571,7 @@ const Tickets = () => {
                   {dateFrom ? format(dateFrom, "MMM dd, yy") : "From"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
                 <CalendarComponent
                   mode="single"
                   selected={dateFrom}
@@ -590,7 +590,7 @@ const Tickets = () => {
                   {dateTo ? format(dateTo, "MMM dd, yy") : "To"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
                 <CalendarComponent
                   mode="single"
                   selected={dateTo}

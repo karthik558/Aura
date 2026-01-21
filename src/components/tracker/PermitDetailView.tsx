@@ -312,13 +312,13 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                           {arrivalDate ? format(arrivalDate, "PPP") : "Select date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
                         <CalendarComponent
                           mode="single"
                           selected={arrivalDate}
                           onSelect={setArrivalDate}
                           initialFocus
-                          className="p-3 pointer-events-auto"
+                          className="pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
@@ -343,13 +343,13 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                           {departureDate ? format(departureDate, "PPP") : "Select date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
                         <CalendarComponent
                           mode="single"
                           selected={departureDate}
                           onSelect={setDepartureDate}
                           initialFocus
-                          className="p-3 pointer-events-auto"
+                          className="pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
