@@ -337,6 +337,29 @@ export type Database = {
           updated_at?: string
         }
       }
+      ticket_comments: {
+        Row: {
+          id: string
+          ticket_id: string
+          user_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ticket_id: string
+          user_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          ticket_id?: string
+          user_id?: string
+          content?: string
+          created_at?: string
+        }
+      }
       notifications: {
         Row: {
           id: string

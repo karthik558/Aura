@@ -82,6 +82,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { profile, isAdmin, loading, canViewPage } = useUserAccess();
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [ticketCount, setTicketCount] = useState(0);
   const [notificationOpen, setNotificationOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -90,6 +91,33 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTicketCount = async () => {
+      if (!profile?.authUserId) {
+        setTicketCount(0);
+        return;
+      }
+
+      const { count, error } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("assigned_to", profile.authUserId)
+        .in("status", ["open", "in_progress"]);
+
+      if (!isMounted) return;
+      if (!error) {
+        setTicketCount(count ?? 0);
+      }
+    };
+
+    loadTicketCount();
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.authUserId]);
 
   const loadNotifications = useCallback(async () => {
     if (!profile?.authUserId) {
@@ -188,6 +216,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   const NavLink = ({ item, index }: { item: typeof mainNavItems[0]; index: number }) => {
     const isActive = location.pathname === item.path;
+    const showTicketBadge = item.pageId === "tickets" && ticketCount > 0;
     
     const linkContent = (
       <Link
@@ -215,9 +244,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 + 0.1 }}
+            className="flex-1"
           >
             {item.label}
           </motion.span>
+        )}
+        {showTicketBadge && !collapsed && (
+          <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-danger text-danger-foreground text-[11px] font-semibold px-1.5 shadow-sm">
+            {ticketCount}
+          </span>
         )}
       </Link>
     );

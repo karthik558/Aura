@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +59,7 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { toast } from "sonner";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserAccess } from "@/context/UserAccessContext";
 
 const container = {
   hidden: { opacity: 0 },
@@ -64,10 +73,13 @@ const item = {
 
 interface Ticket {
   id: string;
+  dbId?: string;
   title: string;
   category: string;
   priority: "low" | "medium" | "high" | "critical";
   status: "open" | "in_progress" | "resolved" | "closed";
+  createdById?: string | null;
+  assignedToId?: string | null;
   createdBy: string;
   assignedTo: string;
   createdAt: string;
@@ -89,6 +101,13 @@ const priorityConfig = {
   medium: { label: "Medium", className: "bg-warning/10 text-warning" },
   high: { label: "High", className: "bg-danger/10 text-danger" },
   critical: { label: "Critical", className: "bg-danger text-danger-foreground" },
+};
+
+const getInitials = (name: string) => {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
 const statusConfig = {
@@ -141,14 +160,7 @@ const issueTemplates = [
   },
 ];
 
-const assignees = [
-  { id: "support", name: "Support Team", role: "General Support" },
-  { id: "admin", name: "Admin", role: "Administrator" },
-  { id: "tech", name: "Tech Team", role: "Technical Issues" },
-  { id: "karthik", name: "Karthik S", role: "Manager" },
-  { id: "john", name: "John Doe", role: "Support Agent" },
-  { id: "jane", name: "Jane Smith", role: "Support Agent" },
-];
+type Assignee = { id: string; name: string; email: string | null; role: string };
 
 const severityLevels = [
   { value: "low", label: "Low", description: "Minor issue, no immediate impact", color: "text-muted-foreground" },
@@ -195,6 +207,7 @@ interface NewTicketForm {
 const Tickets = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { profile } = useUserAccess();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
@@ -203,6 +216,7 @@ const Tickets = () => {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [formStep, setFormStep] = useState<"template" | "details">("template");
   const [formData, setFormData] = useState<NewTicketForm>({
     template: "",
@@ -211,9 +225,15 @@ const Tickets = () => {
     category: "",
     severity: "",
     assignedTo: "",
-    createdBy: "Karthik S",
+    createdBy: "",
   });
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewTicketForm, string>>>({});
+  const canManageTickets = profile?.role === "admin" || profile?.role === "manager";
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
+  const [ticketComments, setTicketComments] = useState<Array<{ id: string; content: string; created_at: string; user_id: string }>>([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentAuthors, setCommentAuthors] = useState<Record<string, { name: string; email: string | null; avatar: string | null }>>({});
   
   useDocumentTitle("Tickets");
 
@@ -222,14 +242,32 @@ const Tickets = () => {
 
     const fetchTickets = async () => {
       setIsLoading(true);
-      const [{ data: userData }, ticketsResponse] = await Promise.all([
+      const [{ data: userData }, ticketsResponse, assigneeResp] = await Promise.all([
         supabase.auth.getUser(),
-        supabase.from("tickets").select("*").order("created_at", { ascending: false }),
+        supabase.from("tickets").select("*, ticket_comments(count)").order("created_at", { ascending: false }),
+        supabase.rpc("list_assignable_users"),
       ]);
 
       if (!isMounted) return;
 
       setCurrentUserId(userData?.user?.id ?? null);
+      setFormData((prev) => ({
+        ...prev,
+        createdBy: profile?.name ? `${profile.name}${profile.email ? ` (${profile.email})` : ""}` : (profile?.email ?? ""),
+      }));
+
+      const fetchedAssignees = !assigneeResp.error
+        ? ((assigneeResp.data ?? []) as Array<{ auth_user_id: string; name: string; email: string | null; role: string }>).map((u) => ({
+            id: u.auth_user_id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+          }))
+        : [];
+
+      if (fetchedAssignees.length) {
+        setAssignees(fetchedAssignees);
+      }
 
       if (ticketsResponse.error) {
         toast.error("Failed to load tickets", { description: ticketsResponse.error.message });
@@ -237,18 +275,50 @@ const Tickets = () => {
         return;
       }
 
-      const mappedTickets: Ticket[] = (ticketsResponse.data ?? []).map((ticket) => ({
+      const assigneeMap = new Map(fetchedAssignees.map((a) => [a.id, a]));
+      const ticketRows = (ticketsResponse.data ?? []) as any[];
+      const ticketIds = ticketRows.map((ticket) => ticket.id).filter(Boolean);
+      let commentCountMap = new Map<string, number>();
+
+      if (ticketIds.length) {
+        const { data: commentRows } = await supabase
+          .from("ticket_comments")
+          .select("ticket_id")
+          .in("ticket_id", ticketIds);
+
+        commentCountMap = (commentRows ?? []).reduce((map, row) => {
+          const current = map.get(row.ticket_id) ?? 0;
+          map.set(row.ticket_id, current + 1);
+          return map;
+        }, new Map<string, number>());
+      }
+
+      const mappedTickets: Ticket[] = ticketRows.map((ticket: any) => {
+        const creator = assigneeMap.get(ticket.created_by ?? "");
+        const assignee = assigneeMap.get(ticket.assigned_to ?? "");
+        const commentsFromJoin = Array.isArray(ticket.ticket_comments)
+          ? ticket.ticket_comments?.[0]?.count
+          : undefined;
+        const commentsFromMap = ticket.id ? commentCountMap.get(ticket.id) : undefined;
+        return {
         id: ticket.ticket_code ?? ticket.id,
+          dbId: ticket.id,
         title: ticket.title,
         category: ticket.category ?? "",
         priority: ticket.priority,
         status: ticket.status,
-        createdBy: ticket.created_by === userData?.user?.id ? "You" : (ticket.created_by ?? "User"),
-        assignedTo: ticket.assigned_to ? "Assigned" : "Unassigned",
+          createdById: ticket.created_by,
+          assignedToId: ticket.assigned_to,
+        createdBy: ticket.created_by === userData?.user?.id
+          ? "You"
+          : (creator ? `${creator.name}${creator.email ? ` (${creator.email})` : ""}` : (ticket.created_by ?? "User")),
+        assignedTo: assignee
+          ? `${assignee.name}${assignee.email ? ` (${assignee.email})` : ""}`
+          : (ticket.assigned_to ? "Assigned" : "Unassigned"),
         createdAt: ticket.created_at,
         lastUpdated: toRelativeTime(ticket.updated_at),
-        comments: ticket.comments_count ?? 0,
-      }));
+        comments: ticket.comments_count ?? commentsFromJoin ?? commentsFromMap ?? 0,
+      }});
 
       setTickets(mappedTickets);
       setIsLoading(false);
@@ -260,6 +330,13 @@ const Tickets = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      createdBy: profile?.name ? `${profile.name}${profile.email ? ` (${profile.email})` : ""}` : (profile?.email ?? ""),
+    }));
+  }, [profile?.name, profile?.email]);
 
   const filteredAndSortedTickets = useMemo(() => {
     let result = tickets.filter(ticket => {
@@ -378,7 +455,7 @@ const Tickets = () => {
         priority: formData.severity as Ticket["priority"],
         status: "open",
         created_by: currentUserId,
-        assigned_to: null,
+        assigned_to: formData.assignedTo,
       })
       .select()
       .single();
@@ -388,14 +465,22 @@ const Tickets = () => {
       return;
     }
 
+    const assignedUser = assignees.find((a) => a.id === data.assigned_to);
+    const assignedLabel = assignedUser
+      ? `${assignedUser.name}${assignedUser.email ? ` (${assignedUser.email})` : ""}`
+      : "Assigned";
+
     const newTicket: Ticket = {
       id: data.ticket_code ?? data.id,
+      dbId: data.id,
       title: data.title,
       category: data.category ?? "",
       priority: data.priority,
       status: data.status,
+      createdById: data.created_by,
+      assignedToId: data.assigned_to,
       createdBy: currentUserId ? "You" : formData.createdBy,
-      assignedTo: "Unassigned",
+      assignedTo: assignedLabel,
       createdAt: data.created_at,
       lastUpdated: "Just now",
       comments: data.comments_count ?? 0,
@@ -417,10 +502,120 @@ const Tickets = () => {
       category: "",
       severity: "",
       assignedTo: "",
-      createdBy: "Karthik S",
+      createdBy: profile?.name ? `${profile.name}${profile.email ? ` (${profile.email})` : ""}` : (profile?.email ?? ""),
     });
     setFormErrors({});
     setFormStep("template");
+  };
+
+  const handleTicketStatusUpdate = async (ticket: Ticket, status: Ticket["status"]) => {
+    const isCreator = Boolean(ticket.createdById && ticket.createdById === currentUserId);
+    const canClose = isCreator && status === "closed";
+    if (!canManageTickets && !canClose) {
+      toast.error("Permission denied", { description: "You do not have access to update tickets." });
+      return;
+    }
+
+    const targetId = ticket.dbId ?? ticket.id;
+    const targetColumn = ticket.dbId ? "id" : "ticket_code";
+    const { error } = await supabase
+      .from("tickets")
+      .update({ status })
+      .eq(targetColumn, targetId);
+
+    if (error) {
+      toast.error("Failed to update ticket", { description: error.message });
+      return;
+    }
+
+    setTickets((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, status } : t)));
+    toast.success("Ticket updated");
+  };
+
+  const openComments = async (ticket: Ticket) => {
+    setActiveTicket(ticket);
+    setCommentDialogOpen(true);
+    if (!ticket.dbId) {
+      setTicketComments([]);
+      return;
+    }
+
+    if (currentUserId) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", currentUserId)
+        .ilike("title", `%${ticket.id}%`);
+    }
+    const { data } = await supabase
+      .from("ticket_comments")
+      .select("id, content, created_at, user_id")
+      .eq("ticket_id", ticket.dbId)
+      .order("created_at", { ascending: false });
+    const uniqueUserIds = Array.from(new Set((data ?? []).map((comment) => comment.user_id).filter(Boolean)));
+    if (uniqueUserIds.length) {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("auth_user_id, name, email, avatar")
+        .in("auth_user_id", uniqueUserIds);
+      if (userData?.length) {
+        const mappedAuthors = userData.reduce<Record<string, { name: string; email: string | null; avatar: string | null }>>(
+          (acc, user) => {
+            acc[user.auth_user_id] = {
+              name: user.name,
+              email: user.email,
+              avatar: user.avatar ?? null,
+            };
+            return acc;
+          },
+          {}
+        );
+        setCommentAuthors((prev) => ({ ...prev, ...mappedAuthors }));
+      }
+    }
+    setTicketComments(data ?? []);
+    setTickets((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, comments: (data ?? []).length } : t)));
+  };
+
+  const handleAddComment = async () => {
+    if (!activeTicket?.dbId || !currentUserId) return;
+    if (activeTicket.status === "closed" && profile?.role !== "admin") {
+      toast.error("Comments locked", { description: "Only admins can comment on closed tickets." });
+      return;
+    }
+    if (!newComment.trim()) {
+      toast.error("Comment required", { description: "Please enter a comment." });
+      return;
+    }
+    const { data, error } = await supabase
+      .from("ticket_comments")
+      .insert({
+        ticket_id: activeTicket.dbId,
+        user_id: currentUserId,
+        content: newComment.trim(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to add comment", { description: error.message });
+      return;
+    }
+
+    setTicketComments((prev) => [data, ...prev]);
+    setTickets((prev) => prev.map((t) => (t.id === activeTicket.id ? { ...t, comments: t.comments + 1 } : t)));
+    if (currentUserId) {
+      const fallbackName = profile?.name ?? profile?.email ?? "You";
+      setCommentAuthors((prev) => ({
+        ...prev,
+        [currentUserId]: {
+          name: profile?.name ?? fallbackName,
+          email: profile?.email ?? null,
+          avatar: null,
+        },
+      }));
+    }
+    setNewComment("");
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -638,8 +833,49 @@ const Tickets = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className="bg-card rounded-xl border border-border p-4 hover:shadow-soft transition-all cursor-pointer"
+                  className="relative bg-card rounded-xl border border-border p-4 hover:shadow-soft transition-all cursor-pointer"
                 >
+                  <div className="absolute right-3 top-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {canManageTickets ? (
+                          <>
+                            <DropdownMenuItem onClick={() => handleTicketStatusUpdate(ticket, "open")}>
+                              Mark Open
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleTicketStatusUpdate(ticket, "in_progress")}>
+                              Mark In Progress
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleTicketStatusUpdate(ticket, "resolved")}>
+                              Mark Resolved
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleTicketStatusUpdate(ticket, "closed")}>
+                              Mark Closed
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() => handleTicketStatusUpdate(ticket, "closed")}
+                            disabled={!Boolean(ticket.createdById && ticket.createdById === currentUserId)}
+                          >
+                            Close Ticket
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => openComments(ticket)}>
+                          Add Comment
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(ticket.id)}>
+                          Copy Ticket ID
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <div className="flex items-start gap-4">
                     <div className={cn(
                       "p-2.5 rounded-lg flex-shrink-0",
@@ -656,14 +892,21 @@ const Tickets = () => {
                             <Badge className={priorityConfig[ticket.priority].className}>
                               {priorityConfig[ticket.priority].label}
                             </Badge>
+                            <span className={cn(
+                              "text-[11px] font-semibold px-2 py-0.5 rounded-full",
+                              ticket.status === "open" && "bg-warning/10 text-warning",
+                              ticket.status === "in_progress" && "bg-primary/10 text-primary",
+                              ticket.status === "resolved" && "bg-success/10 text-success",
+                              ticket.status === "closed" && "bg-muted text-muted-foreground"
+                            )}>
+                              {statusConfig[ticket.status].label}
+                            </span>
                           </div>
                           <h3 className="font-medium text-foreground">{ticket.title}</h3>
                           <p className="text-sm text-muted-foreground mt-1">{ticket.category}</p>
                         </div>
                         
-                        <Button variant="ghost" size="icon" className="flex-shrink-0 h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
+                        <div className="h-8 w-8" />
                       </div>
                       
                       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
@@ -671,10 +914,15 @@ const Tickets = () => {
                           <User className="w-3.5 h-3.5" />
                           <span>{ticket.assignedTo}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openComments(ticket)}
+                          className="flex items-center gap-1 hover:text-foreground transition-colors"
+                          aria-label={`Open comments for ${ticket.id}`}
+                        >
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>{ticket.comments}</span>
-                        </div>
+                        </button>
                         <span>Updated {ticket.lastUpdated}</span>
                       </div>
                     </div>
@@ -867,6 +1115,103 @@ const Tickets = () => {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ticket Comments</DialogTitle>
+            <DialogDescription>
+              {activeTicket?.id} — {activeTicket?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Add Comment *</Label>
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                disabled={activeTicket?.status === "closed" && profile?.role !== "admin"}
+              />
+              <Button
+                onClick={handleAddComment}
+                className="w-full"
+                disabled={activeTicket?.status === "closed" && profile?.role !== "admin"}
+              >
+                Post Comment
+              </Button>
+              {activeTicket?.status === "closed" && profile?.role !== "admin" && (
+                <p className="text-xs text-muted-foreground">
+                  Comments are locked for closed tickets. Admins only.
+                </p>
+              )}
+            </div>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {ticketComments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No comments yet.</p>
+              ) : (
+                ticketComments.map((comment) => {
+                  const isCurrentUser = comment.user_id === currentUserId;
+                  const fallbackAssignee = assignees.find((assignee) => assignee.id === comment.user_id);
+                  const author = commentAuthors[comment.user_id] ?? (fallbackAssignee ? {
+                    name: fallbackAssignee.name,
+                    email: fallbackAssignee.email,
+                    avatar: null,
+                  } : undefined);
+                  const authorName = isCurrentUser
+                    ? "You"
+                    : author?.name ?? "User";
+                  const authorEmail = isCurrentUser
+                    ? (profile?.email ?? null)
+                    : author?.email ?? null;
+                  const avatarLabel = author?.avatar
+                    ? author.avatar
+                    : getInitials(authorName);
+
+                  return (
+                    <div
+                      key={comment.id}
+                      className={cn("flex gap-3", isCurrentUser ? "justify-end" : "justify-start")}
+                    >
+                      {!isCurrentUser && (
+                        <Avatar className="w-7 h-7">
+                          <AvatarFallback className="bg-muted text-xs font-semibold">
+                            {avatarLabel}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div
+                        className={cn(
+                          "max-w-[75%] rounded-2xl border px-3 py-2 text-sm whitespace-pre-wrap",
+                          isCurrentUser
+                            ? "bg-primary/10 border-primary/20 text-foreground"
+                            : "bg-muted/60 border-border text-foreground"
+                        )}
+                      >
+                        <div className="text-xs font-semibold text-muted-foreground mb-1">
+                          {authorName}
+                          {authorEmail ? ` • ${authorEmail}` : ""}
+                        </div>
+                        <div>{comment.content}</div>
+                        <div className="text-[11px] text-muted-foreground mt-2">
+                          {format(new Date(comment.created_at), "MMM d, yyyy • p")}
+                        </div>
+                      </div>
+                      {isCurrentUser && (
+                        <Avatar className="w-7 h-7">
+                          <AvatarFallback className="bg-primary/20 text-xs font-semibold">
+                            {getInitials(profile?.name ?? profile?.email ?? "You")}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
