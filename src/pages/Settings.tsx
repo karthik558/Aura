@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   Bell, 
@@ -81,6 +81,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const { loading: accessLoading, isAdmin: accessIsAdmin, canViewPage, profile } = useUserAccess();
   const [isLoading, setIsLoading] = useState(true);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const { 
     startCollapsed, 
@@ -97,10 +98,32 @@ const Settings = () => {
   const [sidebarStyle, setSidebarStyle] = useState("default");
   const [fontSize, setFontSize] = useState("medium");
   const [compactMode, setCompactMode] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState({
+    emailNotifications: true,
+    weeklyDigest: false,
+    marketingEmails: false,
+  });
+  const [pushNotifications, setPushNotifications] = useState({
+    pendingReminders: true,
+    criticalAlerts: true,
+    statusChanges: true,
+    commentsMentions: true,
+  });
+  const [securityPreferences, setSecurityPreferences] = useState({
+    twoFactor: false,
+    biometric: false,
+    sessionTimeout: 30,
+    rememberDevice: true,
+    loginAlerts: true,
+  });
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+  const settingsLoadedRef = useRef<string | null>(null);
+  const [settingsReady, setSettingsReady] = useState(false);
+  const lastSavedRef = useRef<string | null>(null);
+  const autoSaveErrorShownRef = useRef(false);
 
   const handleChangePassword = async () => {
     if (!newPassword || newPassword.length < 8) {
@@ -144,79 +167,337 @@ const Settings = () => {
   }, []);
 
   useEffect(() => {
+    const loadAuthUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setAuthUserId(data.user?.id ?? null);
+    };
+    loadAuthUser();
+  }, []);
+
+  useEffect(() => {
     if (!profile) return;
     setUserRole(profile.role);
     setProfileName(profile.name);
     setProfileEmail(profile.email ?? "");
   }, [profile]);
 
+  const getSettingsSnapshot = () =>
+    JSON.stringify({
+      theme,
+      startCollapsed,
+      stickyHeader,
+      topNavMode,
+      sidebarStyle,
+      fontSize,
+      compactMode,
+      emailNotifications,
+      pushNotifications,
+      securityPreferences,
+    });
+
+  const ensureSession = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) return sessionData.session;
+    const { data: refreshed, error } = await supabase.auth.refreshSession();
+    if (error) return null;
+    return refreshed.session ?? null;
+  };
+
   useEffect(() => {
     const loadSettings = async () => {
-      if (!profile?.authUserId) return;
+      let targetUserId = profile?.authUserId ?? authUserId;
+      if (!targetUserId) {
+        const session = await ensureSession();
+        if (!session) {
+          toast.error("Failed to load settings", { description: "Session expired. Please sign in again." });
+          setSettingsReady(true);
+          return;
+        }
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          toast.error("Failed to load settings", { description: error.message });
+          setSettingsReady(true);
+          return;
+        }
+        targetUserId = data.user?.id ?? null;
+        setAuthUserId(targetUserId ?? null);
+      }
+      if (!targetUserId) return;
+      if (settingsLoadedRef.current === targetUserId) return;
+      settingsLoadedRef.current = targetUserId;
       const userSettingsTable = sb.from("user_settings");
       const { data, error } = (await (userSettingsTable
-        .select("start_collapsed, sticky_header, top_nav_mode, sidebar_style, font_size, compact_mode")
-        .eq("user_id", profile.authUserId)
+        .select("theme, start_collapsed, sticky_header, top_nav_mode, sidebar_style, font_size, compact_mode, email_notifications, push_notifications, security_preferences")
+        .eq("user_id", targetUserId)
         .maybeSingle() as unknown as Promise<{
         data: {
+          theme: string | null;
           start_collapsed: boolean | null;
           sticky_header: boolean | null;
           top_nav_mode: boolean | null;
           sidebar_style: string | null;
           font_size: string | null;
           compact_mode: boolean | null;
+          email_notifications: Record<string, boolean> | null;
+          push_notifications: Record<string, boolean> | null;
+          security_preferences: Record<string, unknown> | null;
         } | null;
         error: PostgrestError | null;
       }>));
 
-      if (error) return;
+      if (error) {
+        setSettingsReady(true);
+        return;
+      }
 
       if (data) {
-        setStartCollapsed(Boolean(data.start_collapsed));
-        setStickyHeader(Boolean(data.sticky_header));
-        setTopNavMode(Boolean(data.top_nav_mode));
+        if (data.theme) {
+          setTheme(data.theme as "light" | "dark" | "system");
+        }
+        if (data.start_collapsed !== null && data.start_collapsed !== undefined) {
+          setStartCollapsed(data.start_collapsed);
+        }
+        if (data.sticky_header !== null && data.sticky_header !== undefined) {
+          setStickyHeader(data.sticky_header);
+        }
+        if (data.top_nav_mode !== null && data.top_nav_mode !== undefined) {
+          setTopNavMode(data.top_nav_mode);
+        }
         setSidebarStyle(data.sidebar_style ?? "default");
         setFontSize(data.font_size ?? "medium");
         setCompactMode(Boolean(data.compact_mode));
+        if (data.email_notifications) {
+          setEmailNotifications((prev) => ({ ...prev, ...data.email_notifications }));
+        }
+        if (data.push_notifications) {
+          setPushNotifications((prev) => ({ ...prev, ...data.push_notifications }));
+        }
+        if (data.security_preferences) {
+          setSecurityPreferences((prev) => ({
+            ...prev,
+            ...data.security_preferences,
+            sessionTimeout: Number(data.security_preferences.sessionTimeout ?? prev.sessionTimeout),
+          }));
+        }
+      } else {
+        const upsertSettings = userSettingsTable.upsert.bind(userSettingsTable) as unknown as ((
+          values: TablesInsert<"user_settings">,
+          options: { onConflict: string }
+        ) => Promise<{ error: PostgrestError | null }>);
+
+        const { error: upsertError } = await upsertSettings(
+          {
+            user_id: targetUserId,
+            user_name: profileName,
+            user_email: profileEmail,
+            theme,
+            start_collapsed: startCollapsed,
+            sticky_header: stickyHeader,
+            top_nav_mode: topNavMode,
+            sidebar_style: sidebarStyle,
+            font_size: fontSize,
+            compact_mode: compactMode,
+            email_notifications: emailNotifications,
+            push_notifications: pushNotifications,
+            security_preferences: securityPreferences,
+          },
+          { onConflict: "user_id" }
+        );
+        if (upsertError) {
+          toast.error("Failed to initialize settings", { description: upsertError.message });
+        }
       }
+
+      setSettingsReady(true);
+      setIsSavingSettings(false);
     };
 
     loadSettings();
-  }, [profile, setStartCollapsed, setStickyHeader, setTopNavMode]);
+  }, [
+    profile,
+    authUserId,
+    profileName,
+    profileEmail,
+    setStartCollapsed,
+    setStickyHeader,
+    setTopNavMode,
+    setTheme,
+    theme,
+    startCollapsed,
+    stickyHeader,
+    topNavMode,
+    sidebarStyle,
+    fontSize,
+    compactMode,
+    emailNotifications,
+    pushNotifications,
+    securityPreferences,
+  ]);
 
-  const handleSaveSettings = async () => {
-    if (!profile?.authUserId) return;
-    setIsSavingSettings(true);
+  useEffect(() => {
+    if (!settingsReady) return;
+    if (lastSavedRef.current !== null) return;
+    lastSavedRef.current = getSettingsSnapshot();
+  }, [
+    settingsReady,
+    theme,
+    startCollapsed,
+    stickyHeader,
+    topNavMode,
+    sidebarStyle,
+    fontSize,
+    compactMode,
+    emailNotifications,
+    pushNotifications,
+    securityPreferences,
+  ]);
+
+  const saveSettings = async (silent = false, snapshot?: string) => {
+    let targetUserId = profile?.authUserId ?? authUserId;
+    if (!targetUserId) {
+      const session = await ensureSession();
+      if (!session) {
+        if (!silent) {
+          toast.error("Failed to save settings", { description: "Session expired. Please sign in again." });
+        }
+        return;
+      }
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        if (!silent) {
+          toast.error("Failed to save settings", { description: error.message });
+        }
+        return;
+      }
+      targetUserId = data.user?.id ?? null;
+      setAuthUserId(targetUserId ?? null);
+    }
+    if (!targetUserId) return;
+    if (!silent) {
+      setIsSavingSettings(true);
+    }
     const userSettingsTable = sb.from("user_settings");
-    const upsertSettings = userSettingsTable.upsert as unknown as ((
+    const upsertSettings = userSettingsTable.upsert.bind(userSettingsTable) as unknown as ((
       values: TablesInsert<"user_settings">,
       options: { onConflict: string }
     ) => Promise<{ error: PostgrestError | null }>);
 
-    const { error } = await upsertSettings(
-      {
-        user_id: profile.authUserId,
-        user_name: profileName,
-        user_email: profileEmail,
-        start_collapsed: startCollapsed,
-        sticky_header: stickyHeader,
-        top_nav_mode: topNavMode,
-        sidebar_style: sidebarStyle,
-        font_size: fontSize,
-        compact_mode: compactMode,
-      },
-      { onConflict: "user_id" }
-    );
+    const payload = {
+      user_id: targetUserId,
+      user_name: profileName,
+      user_email: profileEmail,
+      theme,
+      start_collapsed: startCollapsed,
+      sticky_header: stickyHeader,
+      top_nav_mode: topNavMode,
+      sidebar_style: sidebarStyle,
+      font_size: fontSize,
+      compact_mode: compactMode,
+      email_notifications: emailNotifications,
+      push_notifications: pushNotifications,
+      security_preferences: securityPreferences,
+    };
 
-    if (error) {
-      toast.error("Failed to save settings", { description: error.message });
-      setIsSavingSettings(false);
-      return;
+    const reportSaveError = (message: string, err?: { message?: string; details?: string; hint?: string }) => {
+      const description = err?.details || err?.hint || err?.message || "Unknown error";
+      if (!silent) {
+        toast.error(message, { description });
+      } else if (!autoSaveErrorShownRef.current) {
+        toast.error("Auto-save failed", { description });
+        autoSaveErrorShownRef.current = true;
+      }
+    };
+
+    try {
+      const { error } = await upsertSettings(
+        {
+          ...payload,
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (error) {
+        reportSaveError("Failed to save settings", error);
+
+        const { error: updateError } = await sb
+          .from("user_settings")
+          .update({
+            theme: payload.theme,
+            start_collapsed: payload.start_collapsed,
+            sticky_header: payload.sticky_header,
+            top_nav_mode: payload.top_nav_mode,
+            sidebar_style: payload.sidebar_style,
+            font_size: payload.font_size,
+            compact_mode: payload.compact_mode,
+            email_notifications: payload.email_notifications,
+            push_notifications: payload.push_notifications,
+            security_preferences: payload.security_preferences,
+            user_name: payload.user_name,
+            user_email: payload.user_email,
+          })
+          .eq("user_id", targetUserId);
+
+        if (updateError) {
+          reportSaveError("Failed to update settings", updateError);
+
+          const { error: insertError } = await sb.from("user_settings").insert(payload);
+          if (insertError) {
+            reportSaveError("Failed to create settings", insertError);
+            console.error("Failed to save settings", insertError);
+            return;
+          }
+        }
+      }
+
+      if (!silent) {
+        toast.success("Settings saved");
+      }
+      autoSaveErrorShownRef.current = false;
+      if (snapshot) {
+        lastSavedRef.current = snapshot;
+      }
+    } catch (err) {
+      if (!silent) {
+        toast.error("Failed to save settings");
+      }
+    } finally {
+      if (!silent) {
+        setIsSavingSettings(false);
+      }
     }
-
-    toast.success("Settings saved");
-    setIsSavingSettings(false);
   };
+
+  useEffect(() => {
+    const targetUserId = profile?.authUserId ?? authUserId;
+    if (!targetUserId) return;
+    if (!settingsReady) return;
+    if (settingsLoadedRef.current !== targetUserId) return;
+    if (lastSavedRef.current === null) return;
+    if (!profileName && !profileEmail) return;
+
+    const snapshot = getSettingsSnapshot();
+    if (snapshot === lastSavedRef.current) return;
+
+    const timeout = setTimeout(() => {
+      saveSettings(true, snapshot);
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [
+    profile?.authUserId,
+    authUserId,
+    settingsReady,
+    theme,
+    startCollapsed,
+    stickyHeader,
+    topNavMode,
+    sidebarStyle,
+    fontSize,
+    compactMode,
+    emailNotifications,
+    pushNotifications,
+    securityPreferences,
+  ]);
 
   useEffect(() => {
     if (accessLoading) return;
@@ -275,7 +556,7 @@ const Settings = () => {
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Current Role</Label>
-          <Select value={userRole} onValueChange={setUserRole}>
+          <Select value={userRole} onValueChange={setUserRole} disabled>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -443,16 +724,21 @@ const Settings = () => {
               </div>
               <div className="space-y-3">
                 {[
-                  { label: "Email notifications", desc: "Receive email alerts for important updates" },
-                  { label: "Weekly digest", desc: "Get a summary of activity every week" },
-                  { label: "Marketing emails", desc: "Receive news and promotional content" },
-                ].map((n, i) => (
-                  <div key={i} className="flex items-center justify-between py-2">
+                  { label: "Email notifications", desc: "Receive email alerts for important updates", key: "emailNotifications" },
+                  { label: "Weekly digest", desc: "Get a summary of activity every week", key: "weeklyDigest" },
+                  { label: "Marketing emails", desc: "Receive news and promotional content", key: "marketingEmails" },
+                ].map((n) => (
+                  <div key={n.key} className="flex items-center justify-between py-2">
                     <div>
                       <p className="text-sm font-medium">{n.label}</p>
                       <p className="text-xs text-muted-foreground">{n.desc}</p>
                     </div>
-                    <Switch defaultChecked={i === 0} />
+                    <Switch
+                      checked={emailNotifications[n.key as keyof typeof emailNotifications]}
+                      onCheckedChange={(checked) =>
+                        setEmailNotifications((prev) => ({ ...prev, [n.key]: checked }))
+                      }
+                    />
                   </div>
                 ))}
               </div>
@@ -465,17 +751,22 @@ const Settings = () => {
               </div>
               <div className="space-y-3">
                 {[
-                  { label: "Pending reminders", desc: "Daily reminder for pending uploads" },
-                  { label: "Critical alerts", desc: "Immediate alerts for urgent issues" },
-                  { label: "Status changes", desc: "Notify when permit status changes" },
-                  { label: "Comments & mentions", desc: "Get notified when someone mentions you" },
-                ].map((n, i) => (
-                  <div key={i} className="flex items-center justify-between py-2">
+                  { label: "Pending reminders", desc: "Daily reminder for pending uploads", key: "pendingReminders" },
+                  { label: "Critical alerts", desc: "Immediate alerts for urgent issues", key: "criticalAlerts" },
+                  { label: "Status changes", desc: "Notify when permit status changes", key: "statusChanges" },
+                  { label: "Comments & mentions", desc: "Get notified when someone mentions you", key: "commentsMentions" },
+                ].map((n) => (
+                  <div key={n.key} className="flex items-center justify-between py-2">
                     <div>
                       <p className="text-sm font-medium">{n.label}</p>
                       <p className="text-xs text-muted-foreground">{n.desc}</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch
+                      checked={pushNotifications[n.key as keyof typeof pushNotifications]}
+                      onCheckedChange={(checked) =>
+                        setPushNotifications((prev) => ({ ...prev, [n.key]: checked }))
+                      }
+                    />
                   </div>
                 ))}
               </div>
@@ -495,14 +786,24 @@ const Settings = () => {
                     <p className="text-sm font-medium">Two-factor authentication</p>
                     <p className="text-xs text-muted-foreground">Add an extra layer of security</p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={securityPreferences.twoFactor}
+                    onCheckedChange={(checked) =>
+                      setSecurityPreferences((prev) => ({ ...prev, twoFactor: checked }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-medium">Biometric login</p>
                     <p className="text-xs text-muted-foreground">Use fingerprint or face recognition</p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={securityPreferences.biometric}
+                    onCheckedChange={(checked) =>
+                      setSecurityPreferences((prev) => ({ ...prev, biometric: checked }))
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -519,7 +820,19 @@ const Settings = () => {
                     <p className="text-xs text-muted-foreground">Auto logout after inactivity</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Input defaultValue="30" className="w-16 h-8 text-center" />
+                    <Input
+                      value={securityPreferences.sessionTimeout}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (Number.isNaN(value)) return;
+                        setSecurityPreferences((prev) => ({
+                          ...prev,
+                          sessionTimeout: Math.max(5, Math.min(240, value)),
+                        }));
+                      }}
+                      className="w-16 h-8 text-center"
+                      inputMode="numeric"
+                    />
                     <span className="text-xs text-muted-foreground">min</span>
                   </div>
                 </div>
@@ -528,14 +841,24 @@ const Settings = () => {
                     <p className="text-sm font-medium">Remember device</p>
                     <p className="text-xs text-muted-foreground">Stay logged in on trusted devices</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={securityPreferences.rememberDevice}
+                    onCheckedChange={(checked) =>
+                      setSecurityPreferences((prev) => ({ ...prev, rememberDevice: checked }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-medium">Login alerts</p>
                     <p className="text-xs text-muted-foreground">Get notified of new sign-ins</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={securityPreferences.loginAlerts}
+                    onCheckedChange={(checked) =>
+                      setSecurityPreferences((prev) => ({ ...prev, loginAlerts: checked }))
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -567,7 +890,7 @@ const Settings = () => {
 
       {/* Save */}
       <motion.div variants={item} className="flex justify-end pt-2">
-        <Button className="gap-2" onClick={handleSaveSettings} disabled={isSavingSettings}>
+        <Button className="gap-2" onClick={() => saveSettings(false, getSettingsSnapshot())} disabled={isSavingSettings}>
           <Save className="w-4 h-4" />
           {isSavingSettings ? "Saving..." : "Save Changes"}
         </Button>
