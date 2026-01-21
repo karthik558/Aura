@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, X, Clock, FileText, User, Ticket, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import auraLogo from "@/assets/aura-logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface SearchResult {
   id: string;
@@ -18,6 +20,7 @@ interface SearchResult {
   subtitle: string;
   type: "permit" | "user" | "ticket" | "page";
   path: string;
+  permitId?: string;
 }
 
 const mockRecentSearches = [
@@ -26,13 +29,12 @@ const mockRecentSearches = [
   "John Smith",
 ];
 
-const mockResults: SearchResult[] = [
-  { id: "1", title: "Permit #1234", subtitle: "John Smith - Room 204", type: "permit", path: "/tracker" },
-  { id: "2", title: "Permit #5678", subtitle: "Sarah Johnson - Room 512", type: "permit", path: "/tracker" },
-  { id: "3", title: "Dashboard", subtitle: "View analytics and overview", type: "page", path: "/" },
-  { id: "4", title: "Tracker", subtitle: "Manage all permits", type: "page", path: "/tracker" },
-  { id: "5", title: "Reports", subtitle: "Generate and view reports", type: "page", path: "/reports" },
-  { id: "6", title: "Ticket #567", subtitle: "Support request - Pending", type: "ticket", path: "/tickets" },
+const pageResults: SearchResult[] = [
+  { id: "page-dashboard", title: "Dashboard", subtitle: "View analytics and overview", type: "page", path: "/" },
+  { id: "page-tracker", title: "Tracker", subtitle: "Manage all permits", type: "page", path: "/tracker" },
+  { id: "page-reports", title: "Reports", subtitle: "Generate and view reports", type: "page", path: "/reports" },
+  { id: "page-tickets", title: "Tickets", subtitle: "Support and requests", type: "page", path: "/tickets" },
+  { id: "page-settings", title: "Settings", subtitle: "Preferences and configuration", type: "page", path: "/settings" },
 ];
 
 const getResultIcon = (type: SearchResult["type"]) => {
@@ -52,14 +54,60 @@ export function Header({ stickyHeader = true }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [permitResults, setPermitResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
 
-  const filteredResults = searchQuery.length > 0
-    ? mockResults.filter(r => 
-        r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredResults = useMemo(() => {
+    if (!normalizedQuery) return [];
+    const pageMatches = pageResults.filter(result =>
+      result.title.toLowerCase().includes(normalizedQuery) ||
+      result.subtitle.toLowerCase().includes(normalizedQuery)
+    );
+    const permitMatches = permitResults.filter(result =>
+      result.title.toLowerCase().includes(normalizedQuery) ||
+      result.subtitle.toLowerCase().includes(normalizedQuery)
+    );
+    return [...permitMatches, ...pageMatches].slice(0, 12);
+  }, [normalizedQuery, permitResults]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+
+    const fetchPermits = async () => {
+      setIsSearching(true);
+      const { data, error } = await supabase
+        .from("permits")
+        .select("id, permit_code, confirmation_number, guest_name, name, property, arrival_date, status")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (error) {
+        setPermitResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      const mapped = ((data ?? []) as Tables<"permits">[]).map((permit) => {
+        const permitId = permit.permit_code ?? permit.id;
+        return {
+          id: `permit-${permit.id}`,
+          title: permit.guest_name || permit.name || permitId,
+          subtitle: `${permitId} • ${permit.confirmation_number ?? "—"} • ${permit.property ?? "—"}`,
+          type: "permit" as const,
+          path: "/tracker",
+          permitId,
+        };
+      });
+
+      setPermitResults(mapped);
+      setIsSearching(false);
+    };
+
+    fetchPermits();
+  }, [searchOpen]);
 
   // Keyboard shortcut to open search
   useEffect(() => {
@@ -92,7 +140,11 @@ export function Header({ stickyHeader = true }: HeaderProps) {
   }, [filteredResults, selectedIndex, navigate]);
 
   const handleResultClick = (result: SearchResult) => {
-    navigate(result.path);
+    if (result.type === "permit" && result.permitId) {
+      navigate(result.path, { state: { openPermitId: result.permitId } });
+    } else {
+      navigate(result.path);
+    }
     setSearchOpen(false);
     setSearchQuery("");
   };
@@ -140,23 +192,22 @@ export function Header({ stickyHeader = true }: HeaderProps) {
             </button>
           </div>
 
-          {/* Mobile: Search icon */}
+          {/* Mobile: Search Trigger */}
           <div className="flex-1 flex justify-end lg:hidden">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9 rounded-xl"
+            <button
               onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 h-9 px-3 bg-card border border-border/60 rounded-xl text-xs text-muted-foreground shadow-soft"
             >
               <Search className="w-4 h-4" />
-            </Button>
+              <span>Search permits, guests...</span>
+            </button>
           </div>
         </div>
       </header>
 
       {/* Search Modal */}
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className="p-0 gap-0 max-w-lg overflow-hidden">
+        <DialogContent className="p-0 gap-0 max-w-lg overflow-hidden [&>button]:hidden">
           <DialogTitle className="sr-only">Search</DialogTitle>
           
           {/* Search Input */}
@@ -166,7 +217,7 @@ export function Header({ stickyHeader = true }: HeaderProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyNavigation}
-              placeholder="Search permits, users, pages..."
+              placeholder="Search permits, guests, confirmation #, or pages..."
               className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
               autoFocus
             />
@@ -241,9 +292,14 @@ export function Header({ stickyHeader = true }: HeaderProps) {
                   exit={{ opacity: 0 }}
                   className="p-2"
                 >
-                  <p className="text-xs font-medium text-muted-foreground px-2 py-1.5">
-                    Results ({filteredResults.length})
-                  </p>
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Results ({filteredResults.length})
+                    </p>
+                    {isSearching && (
+                      <span className="text-[11px] text-muted-foreground">Updating…</span>
+                    )}
+                  </div>
                   <div className="space-y-0.5">
                     {filteredResults.map((result, index) => {
                       const Icon = getResultIcon(result.type);

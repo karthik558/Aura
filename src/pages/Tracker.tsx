@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { 
@@ -23,7 +23,10 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  History
+  History,
+  MapPin,
+  Hash,
+  User as UserIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +75,7 @@ import { Permit, statusConfig } from "@/data/permits";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useUserAccess } from "@/context/UserAccessContext";
+import { useLocation } from "react-router-dom";
 
 const statusConfigWithIcons = {
   pending: { ...statusConfig.pending, icon: Clock },
@@ -87,6 +91,7 @@ const Tracker = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [permits, setPermits] = useState<Permit[]>([]);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -98,6 +103,8 @@ const Tracker = () => {
   const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
   const [detailViewPermit, setDetailViewPermit] = useState<Permit | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const location = useLocation();
+  const handledPermitRef = useRef<string | null>(null);
   const [newPermit, setNewPermit] = useState({
     permitCode: "",
     name: "",
@@ -186,6 +193,23 @@ const Tracker = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const state = location.state as { openPermitId?: string } | null;
+    if (!state?.openPermitId) return;
+    if (handledPermitRef.current === state.openPermitId) return;
+
+    const target = permits.find((permit) =>
+      permit.id === state.openPermitId ||
+      permit.permitCode === state.openPermitId ||
+      permit.dbId === state.openPermitId
+    );
+
+    if (target) {
+      setDetailViewPermit(target);
+      handledPermitRef.current = state.openPermitId;
+    }
+  }, [location.state, permits]);
 
   const handleCreatePermit = async () => {
     if (!newPermit.name || !newPermit.confirmationNumber || !newPermit.arrivalDate || !newPermit.departureDate) {
@@ -525,12 +549,26 @@ const Tracker = () => {
     </Tooltip>
   );
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  const matchesPermitSearch = (permit: Permit) => {
+    if (!normalizedSearch) return true;
+    return (
+      permit.name.toLowerCase().includes(normalizedSearch) ||
+      permit.id.toLowerCase().includes(normalizedSearch) ||
+      permit.confirmationNumber.toLowerCase().includes(normalizedSearch) ||
+      permit.property.toLowerCase().includes(normalizedSearch)
+    );
+  };
+
+  const searchResults = useMemo(() => {
+    if (!normalizedSearch) return [];
+    return permits.filter(matchesPermitSearch).slice(0, 8);
+  }, [permits, normalizedSearch]);
+
   const filteredAndSortedPermits = useMemo(() => {
     let result = permits.filter(permit => {
-      const matchesSearch = permit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                permit.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                permit.confirmationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                permit.property.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = matchesPermitSearch(permit);
       const matchesStatus = statusFilter === "all" || permit.status === statusFilter;
       
       // Date filter
@@ -568,7 +606,7 @@ const Tracker = () => {
     });
 
     return result;
-  }, [permits, searchQuery, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
+  }, [permits, normalizedSearch, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
 
   const stats = useMemo(() => ({
     total: permits.length,
@@ -824,13 +862,92 @@ const Tracker = () => {
         <div className="flex flex-col lg:flex-row gap-3">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by ID, name, confirmation number, or property..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9"
-            />
+            <div className={cn(
+              "relative rounded-xl border border-border/70 bg-background/80 shadow-sm transition focus-within:ring-2 focus-within:ring-primary/20",
+              isSearchOpen && "ring-2 ring-primary/20"
+            )}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search permits, guest names, confirmation #, or property"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchOpen(true)}
+                onBlur={() => setTimeout(() => setIsSearchOpen(false), 120)}
+                className="pl-10 pr-24 h-11 border-0 bg-transparent focus-visible:ring-0"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {normalizedSearch && (
+                  <span className="hidden sm:inline-flex text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                    {searchResults.length} matches
+                  </span>
+                )}
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isSearchOpen && normalizedSearch && (
+              <div className="absolute z-30 mt-2 w-full rounded-xl border border-border/70 bg-card shadow-lg overflow-hidden">
+                <div className="px-3 py-2 border-b border-border/60 text-xs text-muted-foreground flex items-center gap-2">
+                  <Search className="w-3.5 h-3.5" />
+                  Search results
+                </div>
+                {searchResults.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-muted-foreground">No permits found.</div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto">
+                    {searchResults.map((permit) => {
+                      const StatusIcon = statusConfigWithIcons[permit.status].icon;
+                      return (
+                        <button
+                          key={permit.id}
+                          type="button"
+                          onMouseDown={() => {
+                            setDetailViewPermit(permit);
+                            setIsSearchOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-muted/40 transition"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">{permit.name}</span>
+                                <span className="text-[11px] text-muted-foreground">{permit.id}</span>
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                <span className="inline-flex items-center gap-1">
+                                  <Hash className="w-3.5 h-3.5" />
+                                  {permit.confirmationNumber}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  {permit.property}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <UserIcon className="w-3.5 h-3.5" />
+                                  {permit.arrivalDate}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={cn("inline-flex items-center gap-1.5", statusConfig[permit.status].className)}>
+                              <StatusIcon className="w-3 h-3" />
+                              {statusConfig[permit.status].label}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <div className="flex flex-wrap gap-2">
