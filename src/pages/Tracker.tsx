@@ -76,6 +76,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useUserAccess } from "@/context/UserAccessContext";
 import { useLocation } from "react-router-dom";
+import * as XLSX from "xlsx";
 
 const statusConfigWithIcons = {
   pending: { ...statusConfig.pending, icon: Clock },
@@ -103,6 +104,8 @@ const Tracker = () => {
   const [selectedPermit, setSelectedPermit] = useState<Permit | null>(null);
   const [detailViewPermit, setDetailViewPermit] = useState<Permit | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState<string>("25");
+  const [currentPage, setCurrentPage] = useState(1);
   const location = useLocation();
   const handledPermitRef = useRef<string | null>(null);
   const [newPermit, setNewPermit] = useState({
@@ -608,6 +611,18 @@ const Tracker = () => {
     return result;
   }, [permits, normalizedSearch, statusFilter, dateFrom, dateTo, sortField, sortDirection]);
 
+  const pageSizeNumber = Number(pageSize);
+  const totalResults = filteredAndSortedPermits.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / pageSizeNumber));
+  const paginatedPermits = useMemo(() => {
+    const start = (currentPage - 1) * pageSizeNumber;
+    return filteredAndSortedPermits.slice(start, start + pageSizeNumber);
+  }, [filteredAndSortedPermits, currentPage, pageSizeNumber]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [pageSize, searchQuery, statusFilter, dateFrom, dateTo]);
+
   const stats = useMemo(() => ({
     total: permits.length,
     pending: permits.filter(p => p.status === "pending").length,
@@ -624,6 +639,33 @@ const Tracker = () => {
     return sortDirection === "asc" 
       ? <ArrowUp className="w-3 h-3 ml-1" /> 
       : <ArrowDown className="w-3 h-3 ml-1" />;
+  };
+
+  const handleExport = () => {
+    if (!filteredAndSortedPermits.length) {
+      toast.error("No data to export");
+      return;
+    }
+
+    const rows = filteredAndSortedPermits.map((permit) => ({
+      ID: permit.id,
+      Name: permit.name,
+      "Confirmation #": permit.confirmationNumber,
+      Arrival: permit.arrivalDate,
+      Departure: permit.departureDate,
+      Adults: permit.adults,
+      Property: permit.property,
+      Status: permit.status,
+      "Last Updated": permit.lastUpdated,
+      "Updated By": permit.updatedBy,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Permits");
+
+    const fileName = `Aura_Permits_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   if (isLoading) {
@@ -1011,7 +1053,7 @@ const Tracker = () => {
             </Select>
 
             {/* Export */}
-            <Button variant="outline" size="sm" className="gap-2 h-9">
+            <Button variant="outline" size="sm" className="gap-2 h-9" onClick={handleExport}>
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Export</span>
             </Button>
@@ -1078,7 +1120,7 @@ const Tracker = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredAndSortedPermits.map((permit, index) => {
+              {paginatedPermits.map((permit, index) => {
                 const StatusIcon = statusConfigWithIcons[permit.status].icon;
                 return (
                   <motion.tr 
@@ -1229,14 +1271,44 @@ const Tracker = () => {
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-border">
           <p className="text-xs text-muted-foreground">
-            Showing <span className="font-medium">{filteredAndSortedPermits.length}</span> of{" "}
-            <span className="font-medium">{permits.length}</span> permits
+            Showing{" "}
+            <span className="font-medium">
+              {totalResults === 0 ? 0 : (currentPage - 1) * pageSizeNumber + 1}
+            </span>
+            {" "}to{" "}
+            <span className="font-medium">
+              {Math.min(currentPage * pageSizeNumber, totalResults)}
+            </span>
+            {" "}of{" "}
+            <span className="font-medium">{totalResults}</span> permits
           </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled className="h-7 text-xs">
+          <div className="flex items-center gap-2">
+            <Select value={pageSize} onValueChange={setPageSize}>
+              <SelectTrigger className="h-7 w-[90px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              className="h-7 text-xs"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            >
               Previous
             </Button>
-            <Button variant="outline" size="sm" className="h-7 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              className="h-7 text-xs"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            >
               Next
             </Button>
           </div>
@@ -1245,7 +1317,7 @@ const Tracker = () => {
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-3">
-        {filteredAndSortedPermits.map((permit, index) => {
+        {paginatedPermits.map((permit, index) => {
           const StatusIcon = statusConfigWithIcons[permit.status].icon;
           return (
             <motion.div
