@@ -196,6 +196,17 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
     };
   }, [permit.dbId, permit.trackingHistory]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const createdEntry = useMemo(() => {
     return history.find((entry) => entry.action.toLowerCase().includes("created"));
   }, [history]);
@@ -223,14 +234,14 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-background overflow-y-auto"
+      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="max-w-4xl mx-auto p-4 lg:p-6 pb-20 lg:pb-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-24">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-background/90 backdrop-blur border-b border-border/60 mb-4 flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9">
@@ -278,7 +289,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           {/* Main Info */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -287,7 +298,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             className="lg:col-span-2 space-y-6"
           >
             {/* Status Card */}
-            <div className="bg-card rounded-xl border border-border p-5">
+            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-medium text-foreground flex items-center gap-2">
                   <FileText className="w-4 h-4" />
@@ -326,7 +337,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             </div>
 
             {/* Guest Information */}
-            <div className="bg-card rounded-xl border border-border p-5">
+            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
               <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
                 <User className="w-4 h-4" />
                 Guest Information
@@ -413,7 +424,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             </div>
 
             {/* Travel Dates */}
-            <div className="bg-card rounded-xl border border-border p-5">
+            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
               <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
                 <Plane className="w-4 h-4" />
                 Travel Dates
@@ -486,7 +497,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
 
             {/* Notes Section */}
             {isEditing && (
-              <div className="bg-card rounded-xl border border-border p-5">
+              <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
                 <h2 className="font-medium text-foreground mb-4">Additional Notes</h2>
                 <Textarea
                   placeholder="Add any additional notes about this permit..."
@@ -504,7 +515,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             className="space-y-6"
           >
             {/* Quick Actions */}
-            <div className="bg-card rounded-xl border border-border p-5">
+            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
               <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
                 Quick Actions
               </h2>
@@ -531,7 +542,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             </div>
 
             {/* Tracking History */}
-            <div className="bg-card rounded-xl border border-border p-5">
+            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
               <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
                 <History className="w-4 h-4" />
                 Tracking History
@@ -562,7 +573,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             </div>
 
             {/* Meta Info */}
-            <div className="bg-card rounded-xl border border-border p-5">
+            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
               <h2 className="font-medium text-foreground mb-4">Last Updated</h2>
               <div className="text-sm">
                 <p className="text-muted-foreground">{lastEntry?.date ?? editedPermit.lastUpdated}</p>
