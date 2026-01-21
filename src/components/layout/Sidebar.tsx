@@ -57,7 +57,6 @@ const mainNavItems = [
 const systemNavItems = [
   { icon: Users, label: "Users", path: "/users", pageId: "users" },
   { icon: Settings, label: "Settings", path: "/settings", pageId: "settings" },
-  { icon: Activity, label: "System Status", path: "/system-status", pageId: "system-status" },
 ];
 
 const quickLinks = [
@@ -176,8 +175,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   const visibleSystemNavItems = useMemo(() => {
     if (loading) return [];
-    if (isAdmin) return systemNavItems;
-    return systemNavItems.filter((item) => canViewPage(item.pageId));
+    const base = isAdmin
+      ? systemNavItems
+      : systemNavItems.filter((item) => canViewPage(item.pageId));
+
+    if (!isAdmin && canViewPage("system-status")) {
+      return [...base, { icon: Activity, label: "System Status", path: "/system-status", pageId: "system-status" }];
+    }
+
+    return base;
   }, [loading, isAdmin, canViewPage]);
 
   const NavLink = ({ item, index }: { item: typeof mainNavItems[0]; index: number }) => {
