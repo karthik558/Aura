@@ -252,16 +252,7 @@ const Auth = () => {
 
       {/* Right Panel - Auth Form */}
       <div className="flex-1 flex flex-col">
-        {/* Mobile header */}
-        <div className="lg:hidden p-6 flex items-center justify-center">
-          <img 
-            src={auraLogo} 
-            alt="Aura" 
-            className="w-16 h-16 rounded-xl shadow-lg"
-          />
-        </div>
-
-        <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
+        <div className="flex-1 flex items-center justify-center px-5 py-10 sm:p-10">
           <div className="w-full max-w-md">
             <AnimatePresence mode="wait">
               {/* Login Form */}
@@ -273,12 +264,20 @@ const Auth = () => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
-                    <p className="text-muted-foreground mt-2">Enter your credentials to access your account</p>
+                  <div className="text-center mb-6 sm:mb-8">
+                    <div className="mx-auto mb-3 -mt-1">
+                      <img
+                        src={auraScriptLogo}
+                        alt="Aura"
+                        className="mx-auto h-auto w-44 lg:hidden"
+                        style={{ filter: "brightness(0) saturate(100%) invert(64%) sepia(23%) saturate(684%) hue-rotate(93deg) brightness(96%) contrast(90%)" }}
+                      />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Welcome back</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-2">Enter your credentials to access your account</p>
                   </div>
 
-                  <form onSubmit={handleLogin} className="space-y-5">
+                  <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <div className="relative">
@@ -289,7 +288,7 @@ const Auth = () => {
                           placeholder="name@company.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className={cn("pl-10", errors.email && "border-danger")}
+                          className={cn("pl-10 h-11", errors.email && "border-danger")}
                         />
                       </div>
                       {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
@@ -314,7 +313,7 @@ const Auth = () => {
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className={cn("pl-10 pr-10", errors.password && "border-danger")}
+                          className={cn("pl-10 pr-10 h-11", errors.password && "border-danger")}
                         />
                         <button
                           type="button"
@@ -338,7 +337,7 @@ const Auth = () => {
                       </Label>
                     </div>
 
-                    <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+                    <Button type="submit" className="w-full gap-2 h-11" disabled={isLoading}>
                       {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -362,12 +361,20 @@ const Auth = () => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-foreground">Create an account</h2>
-                    <p className="text-muted-foreground mt-2">Get started with your free account today</p>
+                  <div className="text-center mb-6 sm:mb-8">
+                    <div className="mx-auto mb-3 -mt-1">
+                      <img
+                        src={auraScriptLogo}
+                        alt="Aura"
+                        className="mx-auto h-auto w-44 lg:hidden"
+                        style={{ filter: "brightness(0) saturate(100%) invert(64%) sepia(23%) saturate(684%) hue-rotate(93deg) brightness(96%) contrast(90%)" }}
+                      />
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Create an account</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-2">Get started with your free account today</p>
                   </div>
 
-                  <form onSubmit={handleSignup} className="space-y-5">
+                  <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
                     <div className="space-y-2">
                       <Label htmlFor="fullName">Full Name</Label>
                       <div className="relative">
@@ -378,7 +385,7 @@ const Auth = () => {
                           placeholder="John Doe"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          className={cn("pl-10", errors.fullName && "border-danger")}
+                          className={cn("pl-10 h-11", errors.fullName && "border-danger")}
                         />
                       </div>
                       {errors.fullName && <p className="text-xs text-danger">{errors.fullName}</p>}
@@ -394,7 +401,7 @@ const Auth = () => {
                           placeholder="name@company.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className={cn("pl-10", errors.email && "border-danger")}
+                          className={cn("pl-10 h-11", errors.email && "border-danger")}
                         />
                       </div>
                       {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
@@ -410,7 +417,7 @@ const Auth = () => {
                           placeholder="••••••••"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className={cn("pl-10 pr-10", errors.password && "border-danger")}
+                          className={cn("pl-10 pr-10 h-11", errors.password && "border-danger")}
                         />
                         <button
                           type="button"
@@ -434,13 +441,13 @@ const Auth = () => {
                           placeholder="••••••••"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className={cn("pl-10", errors.confirmPassword && "border-danger")}
+                          className={cn("pl-10 h-11", errors.confirmPassword && "border-danger")}
                         />
                       </div>
                       {errors.confirmPassword && <p className="text-xs text-danger">{errors.confirmPassword}</p>}
                     </div>
 
-                    <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+                    <Button type="submit" className="w-full gap-2 h-11" disabled={isLoading}>
                       {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -481,9 +488,14 @@ const Auth = () => {
                     Back to login
                   </button>
 
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <Lock className="w-8 h-8 text-primary" />
+                  <div className="text-center mb-6 sm:mb-8">
+                    <div className="mx-auto mb-3 -mt-1">
+                      <img
+                        src={auraScriptLogo}
+                        alt="Aura"
+                        className="mx-auto h-auto w-44 lg:hidden"
+                        style={{ filter: "brightness(0) saturate(100%) invert(64%) sepia(23%) saturate(684%) hue-rotate(93deg) brightness(96%) contrast(90%)" }}
+                      />
                     </div>
                     <h2 className="text-2xl font-bold text-foreground">Forgot password?</h2>
                     <p className="text-muted-foreground mt-2">
@@ -491,7 +503,7 @@ const Auth = () => {
                     </p>
                   </div>
 
-                  <form onSubmit={handleForgotPassword} className="space-y-5">
+                  <form onSubmit={handleForgotPassword} className="space-y-4 sm:space-y-5">
                     <div className="space-y-2">
                       <Label htmlFor="resetEmail">Email</Label>
                       <div className="relative">
@@ -502,13 +514,13 @@ const Auth = () => {
                           placeholder="name@company.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className={cn("pl-10", errors.email && "border-danger")}
+                          className={cn("pl-10 h-11", errors.email && "border-danger")}
                         />
                       </div>
                       {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
                     </div>
 
-                    <Button type="submit" className="w-full gap-2" disabled={isLoading}>
+                    <Button type="submit" className="w-full gap-2 h-11" disabled={isLoading}>
                       {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
