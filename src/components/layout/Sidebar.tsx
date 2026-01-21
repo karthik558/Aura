@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -40,6 +40,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUserAccess } from "@/context/UserAccessContext";
+import type { Database } from "@/integrations/supabase/types";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -74,18 +75,14 @@ const quickLinks = [
   },
 ];
 
-const mockNotifications = [
-  { id: 1, title: "Permit Expiring Soon", message: "Guest permit #1234 expires in 2 days", time: "5 min ago", type: "warning", read: false },
-  { id: 2, title: "New Ticket Created", message: "Support ticket #567 needs attention", time: "1 hour ago", type: "info", read: false },
-  { id: 3, title: "Upload Successful", message: "Bulk import completed with 45 records", time: "3 hours ago", type: "success", read: true },
-];
+type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { profile, isAdmin, loading, canViewPage } = useUserAccess();
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -93,20 +90,72 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     navigate("/auth", { replace: true });
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const loadNotifications = useCallback(async () => {
+    if (!profile?.authUserId) {
+      setNotifications([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id, user_id, title, message, type, read, created_at")
+      .eq("user_id", profile.authUserId)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setNotifications(data ?? []);
+    }
+  }, [profile?.authUserId]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+  const markAsRead = async (id: string) => {
+    if (!profile?.authUserId) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", id)
+      .eq("user_id", profile.authUserId);
+
+    if (!error) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    if (!profile?.authUserId) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("user_id", profile.authUserId);
+
+    if (!error) {
+      setNotifications([]);
+    }
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = Date.now();
+    const then = new Date(timestamp).getTime();
+    const diffSeconds = Math.max(0, Math.floor((now - then) / 1000));
+
+    if (diffSeconds < 60) return `${diffSeconds}s ago`;
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
   };
 
   const displayName = profile?.name ?? "User";
@@ -440,7 +489,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                             </p>
                             <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
                               <Clock className="w-3 h-3" />
-                              {notification.time}
+                              {formatTimeAgo(notification.created_at)}
                             </div>
                           </div>
                           {!notification.read && (
