@@ -135,23 +135,96 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
     }
   };
 
+  const parseCSVRow = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+        continue;
+      }
+
+      current += char;
+    }
+
+    result.push(current.trim());
+    return result.map((value) => value.replace(/^"|"$/g, ""));
+  };
+
   const parseCSV = (content: string): any[] => {
     const lines = content.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
     
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const headers = parseCSVRow(lines[0]).map((header) => header.trim());
     const data: any[] = [];
     
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const values = parseCSVRow(lines[i]);
       const row: any = {};
       headers.forEach((header, index) => {
-        row[header] = values[index] || '';
+        row[header] = values[index] ?? "";
       });
       data.push(row);
     }
     
     return data;
+  };
+
+  const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const getValue = (row: Record<string, any>, keys: string[]) => {
+    for (const key of keys) {
+      if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
+        return row[key];
+      }
+    }
+    const normalized = Object.entries(row).reduce<Record<string, any>>((acc, [key, val]) => {
+      acc[normalizeKey(key)] = val;
+      return acc;
+    }, {});
+    for (const key of keys) {
+      const normalizedKey = normalizeKey(key);
+      if (normalized[normalizedKey] !== undefined && normalized[normalizedKey] !== null && String(normalized[normalizedKey]).trim() !== "") {
+        return normalized[normalizedKey];
+      }
+    }
+    return "";
+  };
+
+  const parseDate = (value: string) => {
+    const trimmed = value?.toString().trim();
+    if (!trimmed) return "";
+
+    const parts = trimmed.includes("/")
+      ? trimmed.split("/")
+      : trimmed.includes("-")
+        ? trimmed.split("-")
+        : [];
+
+    if (parts.length === 3) {
+      const [d, m, y] = parts.map((p) => p.trim());
+      const day = d.padStart(2, "0");
+      const month = m.padStart(2, "0");
+      const year = y.length === 2 ? `20${y}` : y;
+      return `${year}-${month}-${day}`;
+    }
+
+    return trimmed;
   };
 
   const parseXML = (content: string): any[] => {
@@ -217,26 +290,29 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
         }
 
         // Basic validation
-        const name = row.name || row.Name || row.guestName || row.guest_name || row.GuestName;
-        const confirmationNumber = row.confirmationNumber || row.confirmation_number || row.ConfirmationNumber || row.passportNo || row.passport_no || row.PassportNo || "";
-        const arrivalDate = row.arrivalDate || row.arrival_date || row.ArrivalDate || row.date || row.Date;
-        const departureDate = row.departureDate || row.departure_date || row.DepartureDate || row.endDate || row.EndDate;
-        const adultsRaw = row.adults || row.Adults || row.adult || row.Adult || "";
+        const name = getValue(row, ["Name", "name", "guestName", "guest_name", "Guest Name"]);
+        const confirmationNumber = getValue(row, ["Confirmation Number", "confirmationNumber", "confirmation_number", "PassportNo", "passport_no"]);
+        const arrivalDate = getValue(row, ["Arrival", "arrivalDate", "arrival_date", "Arrival Date", "date", "Date"]);
+        const departureDate = getValue(row, ["Departure", "departureDate", "departure_date", "Departure Date", "endDate", "EndDate"]);
+        const adultsRaw = getValue(row, ["Adults", "adults", "adult", "Adult"]);
         const adults = adultsRaw ? Number(adultsRaw) : undefined;
-        const property = row.property || row.Property || row.hotel || row.Hotel || row.nationality || row.Nationality || "";
-        const status = (row.status || row.Status || "pending") as ImportedPermitRow["status"];
+        const property = getValue(row, ["Property", "property", "hotel", "Hotel", "Nationality", "nationality"]);
+        const status = (getValue(row, ["Status", "status"]) || "pending") as ImportedPermitRow["status"];
 
         if (!name) {
           errors.push({ row: i + 2, message: "Missing name" });
           continue;
         }
 
-        if (!arrivalDate) {
+        const parsedArrival = parseDate(arrivalDate);
+        const parsedDeparture = parseDate(departureDate);
+
+        if (!parsedArrival) {
           errors.push({ row: i + 2, message: "Missing arrival date" });
           continue;
         }
 
-        if (!departureDate) {
+        if (!parsedDeparture) {
           errors.push({ row: i + 2, message: "Missing departure date" });
           continue;
         }
@@ -244,8 +320,8 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
         validData.push({
           name: name,
           confirmationNumber,
-          arrivalDate: arrivalDate,
-          departureDate: departureDate,
+          arrivalDate: parsedArrival,
+          departureDate: parsedDeparture,
           adults: Number.isFinite(adults) ? adults : undefined,
           property,
           status,
