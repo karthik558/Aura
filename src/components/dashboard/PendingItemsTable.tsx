@@ -294,7 +294,9 @@ export function PendingItemsTable() {
                 <tr>
                   <th>ID</th>
                   <th>Name</th>
+                  <th>Confirmation #</th>
                   <th>Arrival</th>
+                  <th>Property</th>
                   <th>Days Left</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -310,7 +312,9 @@ export function PendingItemsTable() {
                       </div>
                     </td>
                     <td className="font-medium text-sm">{item.name}</td>
+                    <td className="text-sm text-muted-foreground">{item.confirmationNumber}</td>
                     <td className="text-muted-foreground text-sm">{item.arrivalDate}</td>
+                    <td className="text-sm">{item.property}</td>
                     <td>
                       <span className={cn(
                         "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
@@ -359,7 +363,11 @@ export function PendingItemsTable() {
                     {item.status}
                   </span>
                 </div>
-                <p className="text-sm font-medium">{item.name}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{item.name}</p>
+                  <p className="text-xs text-muted-foreground">Confirmation #{item.confirmationNumber}</p>
+                  <p className="text-xs text-muted-foreground">Property: {item.property}</p>
+                </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">Arrival: {item.arrivalDate}</span>

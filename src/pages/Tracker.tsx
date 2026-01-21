@@ -910,7 +910,7 @@ const Tracker = () => {
         className="hidden md:block bg-card rounded-xl border border-border overflow-hidden"
       >
         <div className="overflow-x-auto">
-          <table className="data-table">
+          <table className="data-table capitalize">
             <thead>
               <tr>
                 <th>
@@ -929,7 +929,7 @@ const Tracker = () => {
                     Name <SortIcon field="name" />
                   </button>
                 </th>
-                <th>Confirmation Number</th>
+                <th>Confirmation #</th>
                 <th>
                   <button 
                     onClick={() => handleSort("arrivalDate")} 

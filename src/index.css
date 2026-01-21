@@ -193,6 +193,14 @@
   .data-table th {
     @apply text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4 bg-muted/30 first:rounded-tl-lg last:rounded-tr-lg;
   }
+
+  .data-table.no-uppercase th {
+    @apply normal-case tracking-normal;
+  }
+
+  .data-table.capitalize th {
+    @apply capitalize tracking-normal;
+  }
   
   .data-table td {
     @apply py-3.5 px-4 text-sm border-t border-border/50;
