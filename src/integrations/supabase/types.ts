@@ -209,9 +209,13 @@ export type Database = {
         Row: {
           id: string
           permit_code: string | null
+          name: string | null
+          confirmation_number: string | null
           guest_name: string
           arrival_date: string
           departure_date: string
+          adults: number | null
+          property: string | null
           nationality: string | null
           passport_no: string | null
           status: Database["public"]["Enums"]["permit_status"]
@@ -229,9 +233,13 @@ export type Database = {
         Insert: {
           id?: string
           permit_code?: string | null
+          name?: string | null
+          confirmation_number?: string | null
           guest_name: string
           arrival_date: string
           departure_date: string
+          adults?: number | null
+          property?: string | null
           nationality?: string | null
           passport_no?: string | null
           status?: Database["public"]["Enums"]["permit_status"]
@@ -249,9 +257,13 @@ export type Database = {
         Update: {
           id?: string
           permit_code?: string | null
+          name?: string | null
+          confirmation_number?: string | null
           guest_name?: string
           arrival_date?: string
           departure_date?: string
+          adults?: number | null
+          property?: string | null
           nationality?: string | null
           passport_no?: string | null
           status?: Database["public"]["Enums"]["permit_status"]

@@ -50,11 +50,12 @@ interface TrackingEntry {
 interface Permit {
   id: string;
   dbId?: string;
-  guestName: string;
+  name: string;
+  confirmationNumber: string;
   arrivalDate: string;
   departureDate: string;
-  nationality: string;
-  passportNo: string;
+  adults: number;
+  property: string;
   status: "pending" | "approved" | "rejected" | "uploaded";
   uploaded: boolean;
   lastUpdated: string;
@@ -131,11 +132,12 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
   const handleCopyAllDetails = async () => {
     const details = [
       `Permit: ${editedPermit.id}`,
-      `Guest: ${editedPermit.guestName}`,
+      `Name: ${editedPermit.name}`,
+      `Confirmation Number: ${editedPermit.confirmationNumber}`,
       `Arrival: ${editedPermit.arrivalDate}`,
       `Departure: ${editedPermit.departureDate}`,
-      `Nationality: ${editedPermit.nationality}`,
-      `Passport: ${editedPermit.passportNo}`,
+      `Adults: ${editedPermit.adults}`,
+      `Property: ${editedPermit.property}`,
       `Status: ${statusConfig[editedPermit.status].label}`,
       `Last Updated: ${lastEntry?.date ?? editedPermit.lastUpdated}`,
       `Updated By: ${lastEntry?.by ?? editedPermit.updatedBy}`,
@@ -335,49 +337,75 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                   <Label className="text-xs text-muted-foreground">Full Name</Label>
                   {isEditing ? (
                     <Input
-                      value={editedPermit.guestName}
-                      onChange={(e) => setEditedPermit({ ...editedPermit, guestName: e.target.value })}
+                      value={editedPermit.name}
+                      onChange={(e) => setEditedPermit({ ...editedPermit, name: e.target.value })}
                       className="h-9"
                     />
                   ) : (
                     <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                      <span className="text-sm font-medium">{editedPermit.guestName}</span>
-                      <CopyButton value={editedPermit.guestName} field="guestName" />
+                      <span className="text-sm font-medium">{editedPermit.name}</span>
+                      <CopyButton value={editedPermit.name} field="name" />
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Nationality</Label>
+                  <Label className="text-xs text-muted-foreground">Confirmation Number</Label>
                   {isEditing ? (
                     <Input
-                      value={editedPermit.nationality}
-                      onChange={(e) => setEditedPermit({ ...editedPermit, nationality: e.target.value })}
+                      value={editedPermit.confirmationNumber}
+                      onChange={(e) => setEditedPermit({ ...editedPermit, confirmationNumber: e.target.value })}
+                      className="h-9"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                        {editedPermit.confirmationNumber}
+                      </span>
+                      <CopyButton value={editedPermit.confirmationNumber} field="confirmationNumber" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Adults</Label>
+                  {isEditing ? (
+                    <Input
+                      type="number"
+                      min={1}
+                      value={editedPermit.adults}
+                      onChange={(e) =>
+                        setEditedPermit({
+                          ...editedPermit,
+                          adults: Math.max(1, Number(e.target.value) || 1),
+                        })
+                      }
+                      className="h-9"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                      <span className="text-sm font-medium">{editedPermit.adults}</span>
+                      <CopyButton value={String(editedPermit.adults)} field="adults" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Property</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editedPermit.property}
+                      onChange={(e) => setEditedPermit({ ...editedPermit, property: e.target.value })}
                       className="h-9"
                     />
                   ) : (
                     <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
                       <span className="text-sm font-medium flex items-center gap-2">
                         <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                        {editedPermit.nationality}
+                        {editedPermit.property}
                       </span>
-                      <CopyButton value={editedPermit.nationality} field="nationality" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs text-muted-foreground">Passport Number</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editedPermit.passportNo}
-                      onChange={(e) => setEditedPermit({ ...editedPermit, passportNo: e.target.value })}
-                      className="h-9"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                      <span className="text-sm font-medium font-mono">{editedPermit.passportNo}</span>
-                      <CopyButton value={editedPermit.passportNo} field="passportNo" />
+                      <CopyButton value={editedPermit.property} field="property" />
                     </div>
                   )}
                 </div>

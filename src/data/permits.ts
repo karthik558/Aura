@@ -4,11 +4,12 @@ export interface Permit {
   id: string;
   dbId?: string;
   permitCode?: string;
-  guestName: string;
+  name: string;
+  confirmationNumber: string;
   arrivalDate: string;
   departureDate: string;
-  nationality: string;
-  passportNo: string;
+  adults: number;
+  property: string;
   status: "pending" | "approved" | "rejected" | "uploaded";
   uploaded: boolean;
   lastUpdated: string;
@@ -24,11 +25,12 @@ const formatDateTime = (date: Date) => format(date, "yyyy-MM-dd HH:mm");
 export const initialPermits: Permit[] = [
   { 
     id: "PRM-001", 
-    guestName: "Michael Anderson", 
+    name: "Michael Anderson", 
+    confirmationNumber: "CONF-1001",
     arrivalDate: formatDate(addDays(today, -7)), 
     departureDate: formatDate(addDays(today, 2)),
-    nationality: "USA",
-    passportNo: "US****234",
+    adults: 2,
+    property: "Aura Downtown",
     status: "pending", 
     uploaded: false, 
     lastUpdated: formatDateTime(addDays(today, -2)), 
@@ -40,11 +42,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-002", 
-    guestName: "Sarah Williams", 
+    name: "Sarah Williams", 
+    confirmationNumber: "CONF-1002",
     arrivalDate: formatDate(addDays(today, -5)), 
     departureDate: formatDate(addDays(today, 3)),
-    nationality: "UK",
-    passportNo: "GB****567",
+    adults: 1,
+    property: "Aura Airport",
     status: "approved", 
     uploaded: false, 
     lastUpdated: formatDateTime(addDays(today, -1)), 
@@ -56,11 +59,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-003", 
-    guestName: "Robert Chen", 
+    name: "Robert Chen", 
+    confirmationNumber: "CONF-1003",
     arrivalDate: formatDate(addDays(today, -3)), 
     departureDate: formatDate(addDays(today, 5)),
-    nationality: "China",
-    passportNo: "CN****890",
+    adults: 2,
+    property: "Aura Marina",
     status: "pending", 
     uploaded: false, 
     lastUpdated: formatDateTime(addDays(today, -2)), 
@@ -72,11 +76,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-004", 
-    guestName: "Emily Johnson", 
+    name: "Emily Johnson", 
+    confirmationNumber: "CONF-1004",
     arrivalDate: formatDate(addDays(today, -2)), 
     departureDate: formatDate(addDays(today, 6)),
-    nationality: "Canada",
-    passportNo: "CA****123",
+    adults: 3,
+    property: "Aura City Center",
     status: "rejected", 
     uploaded: false, 
     lastUpdated: formatDateTime(addDays(today, -1)), 
@@ -88,11 +93,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-005", 
-    guestName: "David Martinez", 
+    name: "David Martinez", 
+    confirmationNumber: "CONF-1005",
     arrivalDate: formatDate(addDays(today, -1)), 
     departureDate: formatDate(addDays(today, 4)),
-    nationality: "Spain",
-    passportNo: "ES****456",
+    adults: 2,
+    property: "Aura Hills",
     status: "approved", 
     uploaded: false, 
     lastUpdated: formatDateTime(today), 
@@ -104,11 +110,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-006", 
-    guestName: "Lisa Thompson", 
+    name: "Lisa Thompson", 
+    confirmationNumber: "CONF-1006",
     arrivalDate: formatDate(today), 
     departureDate: formatDate(addDays(today, 7)),
-    nationality: "Australia",
-    passportNo: "AU****789",
+    adults: 1,
+    property: "Aura Resort",
     status: "uploaded", 
     uploaded: true, 
     lastUpdated: formatDateTime(today), 
@@ -121,11 +128,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-007", 
-    guestName: "James Wilson", 
+    name: "James Wilson", 
+    confirmationNumber: "CONF-1007",
     arrivalDate: formatDate(today), 
     departureDate: formatDate(addDays(today, 1)),
-    nationality: "Germany",
-    passportNo: "DE****012",
+    adults: 2,
+    property: "Aura Gardens",
     status: "pending", 
     uploaded: false, 
     lastUpdated: formatDateTime(today), 
@@ -137,11 +145,12 @@ export const initialPermits: Permit[] = [
   },
   { 
     id: "PRM-008", 
-    guestName: "Amanda Brown", 
+    name: "Amanda Brown", 
+    confirmationNumber: "CONF-1008",
     arrivalDate: formatDate(addDays(today, 1)), 
     departureDate: formatDate(addDays(today, 8)),
-    nationality: "France",
-    passportNo: "FR****345",
+    adults: 2,
+    property: "Aura Seaside",
     status: "approved", 
     uploaded: true, 
     lastUpdated: formatDateTime(today), 

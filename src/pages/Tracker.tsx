@@ -80,7 +80,7 @@ const statusConfigWithIcons = {
   uploaded: { ...statusConfig.uploaded, icon: Upload },
 };
 
-type SortField = "id" | "guestName" | "arrivalDate" | "status" | "lastUpdated";
+type SortField = "id" | "name" | "arrivalDate" | "status" | "lastUpdated";
 type SortDirection = "asc" | "desc";
 
 const Tracker = () => {
@@ -100,11 +100,12 @@ const Tracker = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [newPermit, setNewPermit] = useState({
     permitCode: "",
-    guestName: "",
+    name: "",
+    confirmationNumber: "",
     arrivalDate: "",
     departureDate: "",
-    nationality: "",
-    passportNo: "",
+    adults: 1,
+    property: "",
     status: "pending" as Permit["status"],
   });
   const { profile } = useUserAccess();
@@ -158,11 +159,12 @@ const Tracker = () => {
         id: permit.permit_code ?? permit.id,
         dbId: permit.id,
         permitCode: permit.permit_code ?? undefined,
-        guestName: permit.guest_name,
+        name: permit.name ?? permit.guest_name ?? "",
+        confirmationNumber: permit.confirmation_number ?? permit.passport_no ?? "",
         arrivalDate: permit.arrival_date,
         departureDate: permit.departure_date,
-        nationality: permit.nationality ?? "",
-        passportNo: permit.passport_no ?? "",
+        adults: permit.adults ?? 1,
+        property: permit.property ?? permit.nationality ?? "",
         status: permit.status,
         uploaded: permit.uploaded,
         lastUpdated: permit.last_updated_at ?? permit.updated_at,
@@ -186,7 +188,7 @@ const Tracker = () => {
   }, []);
 
   const handleCreatePermit = async () => {
-    if (!newPermit.guestName || !newPermit.arrivalDate || !newPermit.departureDate) {
+    if (!newPermit.name || !newPermit.confirmationNumber || !newPermit.arrivalDate || !newPermit.departureDate) {
       toast.error("Please fill required fields");
       return;
     }
@@ -194,11 +196,15 @@ const Tracker = () => {
     const permitsTable = supabase.from("permits") as any;
     const { data, error } = await permitsTable
       .insert({
-        guest_name: newPermit.guestName,
+        name: newPermit.name,
+        confirmation_number: newPermit.confirmationNumber,
         arrival_date: newPermit.arrivalDate,
         departure_date: newPermit.departureDate,
-        nationality: newPermit.nationality,
-        passport_no: newPermit.passportNo,
+        adults: newPermit.adults,
+        property: newPermit.property,
+        guest_name: newPermit.name,
+        nationality: newPermit.property,
+        passport_no: newPermit.confirmationNumber,
         status: newPermit.status,
         uploaded: newPermit.status === "uploaded",
         created_by: currentUserId,
@@ -222,11 +228,12 @@ const Tracker = () => {
       id: data.permit_code ?? data.id,
       dbId: data.id,
       permitCode: data.permit_code ?? undefined,
-      guestName: data.guest_name,
+      name: data.name ?? data.guest_name ?? "",
+      confirmationNumber: data.confirmation_number ?? data.passport_no ?? "",
       arrivalDate: data.arrival_date,
       departureDate: data.departure_date,
-      nationality: data.nationality ?? "",
-      passportNo: data.passport_no ?? "",
+      adults: data.adults ?? 1,
+      property: data.property ?? data.nationality ?? "",
       status: data.status,
       uploaded: data.uploaded,
       lastUpdated: data.last_updated_at ?? data.updated_at,
@@ -244,11 +251,12 @@ const Tracker = () => {
     setIsAddPermitOpen(false);
     setNewPermit({
       permitCode: "",
-      guestName: "",
+      name: "",
+      confirmationNumber: "",
       arrivalDate: "",
       departureDate: "",
-      nationality: "",
-      passportNo: "",
+      adults: 1,
+      property: "",
       status: "pending",
     });
     toast.success("Permit created");
@@ -261,11 +269,15 @@ const Tracker = () => {
     const { data, error } = await permitsTable
       .insert(
         importedData.map((row) => ({
-          guest_name: row.guestName,
+          name: row.name,
+          confirmation_number: row.confirmationNumber,
           arrival_date: row.arrivalDate,
           departure_date: row.departureDate,
-          nationality: row.nationality ?? null,
-          passport_no: row.passportNo ?? null,
+          adults: row.adults ?? 1,
+          property: row.property ?? null,
+          guest_name: row.name,
+          nationality: row.property ?? null,
+          passport_no: row.confirmationNumber ?? null,
           status: row.status,
           uploaded: row.status === "uploaded",
           created_by: currentUserId,
@@ -284,11 +296,12 @@ const Tracker = () => {
       id: permit.permit_code ?? permit.id,
       dbId: permit.id,
       permitCode: permit.permit_code ?? undefined,
-      guestName: permit.guest_name,
+      name: permit.name ?? permit.guest_name ?? "",
+      confirmationNumber: permit.confirmation_number ?? permit.passport_no ?? "",
       arrivalDate: permit.arrival_date,
       departureDate: permit.departure_date,
-      nationality: permit.nationality ?? "",
-      passportNo: permit.passport_no ?? "",
+      adults: permit.adults ?? 1,
+      property: permit.property ?? permit.nationality ?? "",
       status: permit.status,
       uploaded: permit.uploaded,
       lastUpdated: permit.last_updated_at ?? permit.updated_at,
@@ -346,11 +359,15 @@ const Tracker = () => {
     const permitsTable = supabase.from("permits") as any;
     const { data, error } = await permitsTable
       .update({
-        guest_name: updatedPermit.guestName,
+        name: updatedPermit.name,
+        confirmation_number: updatedPermit.confirmationNumber,
         arrival_date: updatedPermit.arrivalDate,
         departure_date: updatedPermit.departureDate,
-        nationality: updatedPermit.nationality,
-        passport_no: updatedPermit.passportNo,
+        adults: updatedPermit.adults,
+        property: updatedPermit.property,
+        guest_name: updatedPermit.name,
+        nationality: updatedPermit.property,
+        passport_no: updatedPermit.confirmationNumber,
         status: updatedPermit.status,
         uploaded: updatedPermit.uploaded,
         last_updated_at: new Date().toISOString(),
@@ -375,11 +392,12 @@ const Tracker = () => {
         id: data.permit_code ?? data.id,
         dbId: data.id,
         permitCode: data.permit_code ?? undefined,
-        guestName: data.guest_name,
+        name: data.name ?? data.guest_name ?? "",
+        confirmationNumber: data.confirmation_number ?? data.passport_no ?? "",
         arrivalDate: data.arrival_date,
         departureDate: data.departure_date,
-        nationality: data.nationality ?? "",
-        passportNo: data.passport_no ?? "",
+        adults: data.adults ?? 1,
+        property: data.property ?? data.nationality ?? "",
         status: data.status,
         uploaded: data.uploaded,
         lastUpdated: data.last_updated_at ?? data.updated_at,
@@ -509,9 +527,10 @@ const Tracker = () => {
 
   const filteredAndSortedPermits = useMemo(() => {
     let result = permits.filter(permit => {
-      const matchesSearch = permit.guestName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            permit.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            permit.passportNo.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = permit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                permit.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                permit.confirmationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                permit.property.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || permit.status === statusFilter;
       
       // Date filter
@@ -532,8 +551,8 @@ const Tracker = () => {
         case "id":
           comparison = a.id.localeCompare(b.id);
           break;
-        case "guestName":
-          comparison = a.guestName.localeCompare(b.guestName);
+        case "name":
+          comparison = a.name.localeCompare(b.name);
           break;
         case "arrivalDate":
           comparison = new Date(a.arrivalDate).getTime() - new Date(b.arrivalDate).getTime();
@@ -624,12 +643,21 @@ const Tracker = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="guestName">Guest Name *</Label>
+              <Label htmlFor="name">Name *</Label>
               <Input
-                id="guestName"
-                value={newPermit.guestName}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, guestName: e.target.value }))}
+                id="name"
+                value={newPermit.name}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Guest name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmationNumber">Confirmation Number *</Label>
+              <Input
+                id="confirmationNumber"
+                value={newPermit.confirmationNumber}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, confirmationNumber: e.target.value }))}
+                placeholder="Confirmation number"
               />
             </div>
             <div className="space-y-1.5">
@@ -693,21 +721,26 @@ const Tracker = () => {
               </Popover>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="nationality">Nationality</Label>
+              <Label htmlFor="adults">Adults</Label>
               <Input
-                id="nationality"
-                value={newPermit.nationality}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, nationality: e.target.value }))}
-                placeholder="Country"
+                id="adults"
+                type="number"
+                min={1}
+                value={newPermit.adults}
+                onChange={(e) => setNewPermit(prev => ({
+                  ...prev,
+                  adults: Math.max(1, Number(e.target.value) || 1),
+                }))}
+                placeholder="1"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="passportNo">Passport No</Label>
+              <Label htmlFor="property">Property</Label>
               <Input
-                id="passportNo"
-                value={newPermit.passportNo}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, passportNo: e.target.value }))}
-                placeholder="Passport"
+                id="property"
+                value={newPermit.property}
+                onChange={(e) => setNewPermit(prev => ({ ...prev, property: e.target.value }))}
+                placeholder="Property name"
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
@@ -793,7 +826,7 @@ const Tracker = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by ID, guest name, or passport..."
+              placeholder="Search by ID, name, confirmation number, or property..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-9"
@@ -890,13 +923,13 @@ const Tracker = () => {
                 </th>
                 <th>
                   <button 
-                    onClick={() => handleSort("guestName")} 
+                    onClick={() => handleSort("name")} 
                     className="flex items-center hover:text-foreground transition-colors"
                   >
-                    Guest <SortIcon field="guestName" />
+                    Name <SortIcon field="name" />
                   </button>
                 </th>
-                <th>Nationality</th>
+                <th>Confirmation Number</th>
                 <th>
                   <button 
                     onClick={() => handleSort("arrivalDate")} 
@@ -906,6 +939,8 @@ const Tracker = () => {
                   </button>
                 </th>
                 <th>Departure</th>
+                <th>Adults</th>
+                <th>Property</th>
                 <th>
                   <button 
                     onClick={() => handleSort("status")} 
@@ -945,13 +980,15 @@ const Tracker = () => {
                     </td>
                     <td>
                       <div className="flex items-center gap-1">
-                        <p className="font-medium text-sm">{permit.guestName}</p>
-                        <CopyButton value={permit.guestName} field={`name-${permit.id}`} />
+                        <p className="font-medium text-sm">{permit.name}</p>
+                        <CopyButton value={permit.name} field={`name-${permit.id}`} />
                       </div>
                     </td>
-                    <td className="text-sm">{permit.nationality}</td>
+                    <td className="text-sm">{permit.confirmationNumber}</td>
                     <td className="text-sm">{permit.arrivalDate}</td>
                     <td className="text-sm text-muted-foreground">{permit.departureDate}</td>
+                    <td className="text-sm">{permit.adults}</td>
+                    <td className="text-sm">{permit.property}</td>
                     <td>
                       <span className={cn("inline-flex items-center gap-1.5", statusConfig[permit.status].className)}>
                         <StatusIcon className="w-3 h-3" />
@@ -1105,8 +1142,8 @@ const Tracker = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <span className="font-mono text-xs font-medium text-primary">{permit.id}</span>
-                  <p className="font-medium text-sm mt-1">{permit.guestName}</p>
-                  <p className="text-xs text-muted-foreground">{permit.nationality}</p>
+                  <p className="font-medium text-sm mt-1">{permit.name}</p>
+                  <p className="text-xs text-muted-foreground">{permit.confirmationNumber}</p>
                 </div>
                 <span className={cn("inline-flex items-center gap-1", statusConfig[permit.status].className)}>
                   <StatusIcon className="w-3 h-3" />
@@ -1121,6 +1158,14 @@ const Tracker = () => {
                 <div>
                   <p className="text-xs text-muted-foreground">Departure</p>
                   <p className="font-medium">{permit.departureDate}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Adults</p>
+                  <p className="font-medium">{permit.adults}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Property</p>
+                  <p className="font-medium">{permit.property}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-border">
@@ -1184,7 +1229,7 @@ const Tracker = () => {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-foreground">Tracking History</h3>
-              <p className="text-xs text-muted-foreground">{selectedPermit.id} - {selectedPermit.guestName}</p>
+              <p className="text-xs text-muted-foreground">{selectedPermit.id} - {selectedPermit.name}</p>
             </div>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedPermit(null)}>
               <X className="w-4 h-4" />

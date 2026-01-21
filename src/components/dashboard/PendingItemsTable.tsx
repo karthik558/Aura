@@ -159,11 +159,12 @@ export function PendingItemsTable() {
         id: permit.permit_code ?? permit.id,
         dbId: permit.id,
         permitCode: permit.permit_code ?? undefined,
-        guestName: permit.guest_name,
+        name: permit.name ?? permit.guest_name ?? "",
+        confirmationNumber: permit.confirmation_number ?? permit.passport_no ?? "",
         arrivalDate: permit.arrival_date,
         departureDate: permit.departure_date,
-        nationality: permit.nationality ?? "",
-        passportNo: permit.passport_no ?? "",
+        adults: permit.adults ?? 1,
+        property: permit.property ?? permit.nationality ?? "",
         status: permit.status,
         uploaded: permit.uploaded,
         lastUpdated: permit.last_updated_at ?? permit.updated_at,
@@ -292,7 +293,7 @@ export function PendingItemsTable() {
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Guest</th>
+                  <th>Name</th>
                   <th>Arrival</th>
                   <th>Days Left</th>
                   <th>Status</th>
@@ -308,7 +309,7 @@ export function PendingItemsTable() {
                         <span className="font-mono text-xs font-semibold text-primary">{item.id}</span>
                       </div>
                     </td>
-                    <td className="font-medium text-sm">{item.guestName}</td>
+                    <td className="font-medium text-sm">{item.name}</td>
                     <td className="text-muted-foreground text-sm">{item.arrivalDate}</td>
                     <td>
                       <span className={cn(
@@ -358,7 +359,7 @@ export function PendingItemsTable() {
                     {item.status}
                   </span>
                 </div>
-                <p className="text-sm font-medium">{item.guestName}</p>
+                <p className="text-sm font-medium">{item.name}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">Arrival: {item.arrivalDate}</span>

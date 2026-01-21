@@ -33,11 +33,12 @@ interface ImportResult {
 }
 
 export type ImportedPermitRow = {
-  guestName: string;
+  name: string;
+  confirmationNumber: string;
   arrivalDate: string;
   departureDate: string;
-  nationality?: string;
-  passportNo?: string;
+  adults?: number;
+  property?: string;
   status: "pending" | "approved" | "rejected" | "uploaded";
 };
 
@@ -216,15 +217,17 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
         }
 
         // Basic validation
-        const guestName = row.guestName || row.guest_name || row.GuestName || row.name || row.Name;
+        const name = row.name || row.Name || row.guestName || row.guest_name || row.GuestName;
+        const confirmationNumber = row.confirmationNumber || row.confirmation_number || row.ConfirmationNumber || row.passportNo || row.passport_no || row.PassportNo || "";
         const arrivalDate = row.arrivalDate || row.arrival_date || row.ArrivalDate || row.date || row.Date;
         const departureDate = row.departureDate || row.departure_date || row.DepartureDate || row.endDate || row.EndDate;
-        const nationality = row.nationality || row.Nationality || "";
-        const passportNo = row.passportNo || row.passport_no || row.PassportNo || "";
+        const adultsRaw = row.adults || row.Adults || row.adult || row.Adult || "";
+        const adults = adultsRaw ? Number(adultsRaw) : undefined;
+        const property = row.property || row.Property || row.hotel || row.Hotel || row.nationality || row.Nationality || "";
         const status = (row.status || row.Status || "pending") as ImportedPermitRow["status"];
 
-        if (!guestName) {
-          errors.push({ row: i + 2, message: "Missing guest name" });
+        if (!name) {
+          errors.push({ row: i + 2, message: "Missing name" });
           continue;
         }
 
@@ -239,11 +242,12 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
         }
 
         validData.push({
-          guestName: guestName,
+          name: name,
+          confirmationNumber,
           arrivalDate: arrivalDate,
           departureDate: departureDate,
-          nationality,
-          passportNo,
+          adults: Number.isFinite(adults) ? adults : undefined,
+          property,
           status,
         });
       }
