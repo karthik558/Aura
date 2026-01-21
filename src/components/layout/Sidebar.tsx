@@ -147,8 +147,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const markAsRead = async (id: string) => {
     if (!profile?.authUserId) return;
 
-    const { error } = await supabase
-      .from("notifications")
+    const { error } = await (supabase
+      .from("notifications") as any)
       .update({ read: true })
       .eq("id", id)
       .eq("user_id", profile.authUserId);

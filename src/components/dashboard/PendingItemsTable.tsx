@@ -256,7 +256,7 @@ export function PendingItemsTable() {
     ));
 
     if (targetPermit?.dbId) {
-      await supabase.from("permit_history").insert({
+      await (supabase.from("permit_history") as any).insert({
         permit_id: targetPermit.dbId,
         action: `Status updated to ${statusLabels[newStatus]}`,
         action_by: currentUserId,

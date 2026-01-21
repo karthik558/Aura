@@ -123,7 +123,7 @@ const Tracker = () => {
 
   const insertPermitHistory = async (permitDbId: string | undefined, action: string) => {
     if (!permitDbId) return;
-    await supabase.from("permit_history").insert({
+    await (supabase.from("permit_history") as any).insert({
       permit_id: permitDbId,
       action,
       action_by: currentUserId,
@@ -300,7 +300,7 @@ const Tracker = () => {
       trackingHistory: [],
     }));
 
-    await supabase.from("permit_history").insert(
+    await (supabase.from("permit_history") as any).insert(
       mappedPermits
         .filter((permit) => permit.dbId)
         .map((permit) => ({
