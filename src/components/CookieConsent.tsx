@@ -104,16 +104,16 @@ export function CookieConsent() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:max-w-md z-50"
+          className="fixed bottom-3 left-3 right-3 md:left-auto md:right-6 md:bottom-6 md:max-w-md z-50"
         >
           <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
             {/* Header */}
             <div className="p-5 pb-4">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 flex-wrap">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <Cookie className="w-5 h-5 text-primary" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground">Cookie Preferences</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     We use cookies to enhance your experience. By continuing, you agree to our{" "}
@@ -146,7 +146,7 @@ export function CookieConsent() {
                     {cookieTypes.map((cookie) => (
                       <div
                         key={cookie.key}
-                        className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/30"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-muted/30"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -186,14 +186,14 @@ export function CookieConsent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={() => setShowSettings(false)}
                     >
                       Back
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1 gap-1.5"
+                      className="w-full sm:flex-1 gap-1.5"
                       onClick={handleSavePreferences}
                     >
                       <Check className="w-3.5 h-3.5" />
@@ -205,7 +205,7 @@ export function CookieConsent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 gap-1.5"
+                      className="w-full sm:flex-1 gap-1.5"
                       onClick={() => setShowSettings(true)}
                     >
                       <Settings2 className="w-3.5 h-3.5" />
@@ -214,14 +214,14 @@ export function CookieConsent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={handleRejectAll}
                     >
                       Reject All
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={handleAcceptAll}
                     >
                       Accept All
