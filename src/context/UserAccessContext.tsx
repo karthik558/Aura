@@ -53,6 +53,7 @@ const emptyPermissions: UserPermissions = {
 };
 
 const pageIds = ["dashboard", "tracker", "tickets", "reports", "users", "settings", "system-status"];
+const normalizePageId = (page: string) => page.trim().toLowerCase();
 
 const buildDefaults = (role: Database["public"]["Enums"]["user_role"]) => {
   const baseAccess = pageIds.map((page) => ({
@@ -195,7 +196,7 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
 
       // Ensure avatar and last_login_at are updated for visibility in users table
       const usersUpdateTable = sb.from("users");
-      const updateUsers = usersUpdateTable.update as unknown as ((
+      const updateUsers = usersUpdateTable.update.bind(usersUpdateTable) as unknown as ((
         values: TablesUpdate<"users">
       ) => {
         eq: (column: string, value: string) => Promise<{ error: PostgrestError | null }>;
@@ -218,17 +219,17 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
       const permissionsTable = sb.from("user_permissions");
       const settingsTable = sb.from("user_settings");
 
-      const upsertAccess = accessTable.upsert as unknown as ((
+      const upsertAccess = accessTable.upsert.bind(accessTable) as unknown as ((
         values: TablesInsert<"user_page_access">[],
         options: { onConflict: string }
       ) => Promise<{ error: PostgrestError | null }>);
 
-      const upsertPermissions = permissionsTable.upsert as unknown as ((
+      const upsertPermissions = permissionsTable.upsert.bind(permissionsTable) as unknown as ((
         values: TablesInsert<"user_permissions">,
         options: { onConflict: string }
       ) => Promise<{ error: PostgrestError | null }>);
 
-      const upsertSettings = settingsTable.upsert as unknown as ((
+      const upsertSettings = settingsTable.upsert.bind(settingsTable) as unknown as ((
         values: TablesInsert<"user_settings">,
         options: { onConflict: string }
       ) => Promise<{ error: PostgrestError | null }>);
@@ -290,8 +291,10 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
       } else {
         const accessMap: Record<string, PageAccessEntry> = {};
         accessResp.data.forEach((row) => {
-          accessMap[row.page] = {
-            page: row.page,
+          const pageId = normalizePageId(row.page);
+          if (!pageIds.includes(pageId)) return;
+          accessMap[pageId] = {
+            page: pageId,
             canView: Boolean(row.can_view),
             canEdit: Boolean(row.can_edit),
             canDelete: Boolean(row.can_delete),
@@ -334,10 +337,10 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
 
       const loginTable = sb.from("user_login");
       const activityTable = sb.from("user_activity");
-      const insertLogin = loginTable.insert as unknown as ((
+      const insertLogin = loginTable.insert.bind(loginTable) as unknown as ((
         values: TablesInsert<"user_login">
       ) => Promise<{ error: PostgrestError | null }>);
-      const insertActivity = activityTable.insert as unknown as ((
+      const insertActivity = activityTable.insert.bind(activityTable) as unknown as ((
         values: TablesInsert<"user_activity">
       ) => Promise<{ error: PostgrestError | null }>);
 
@@ -359,6 +362,42 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     hydrate();
   }, []);
+
+  useEffect(() => {
+    if (!profile?.authUserId) return;
+
+    const channel = supabase
+      .channel(`user-access-${profile.authUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_page_access",
+          filter: `user_id=eq.${profile.authUserId}`,
+        },
+        () => {
+          hydrate();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_permissions",
+          filter: `user_id=eq.${profile.authUserId}`,
+        },
+        () => {
+          hydrate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.authUserId]);
 
   const isAdmin = profile?.role === "admin";
 

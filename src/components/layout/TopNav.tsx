@@ -7,6 +7,7 @@ import {
   Ticket, 
   Users, 
   Settings,
+  Activity,
   Bell,
   Sun,
   Moon,
@@ -51,6 +52,7 @@ const navItems = [
   { icon: Ticket, label: "Tickets", path: "/tickets", pageId: "tickets" },
   { icon: Users, label: "Users", path: "/users", pageId: "users" },
   { icon: Settings, label: "Settings", path: "/settings", pageId: "settings" },
+  { icon: Activity, label: "System Status", path: "/system-status", pageId: "system-status" },
 ];
 
 const quickLinks = [

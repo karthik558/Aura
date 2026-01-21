@@ -428,96 +428,102 @@ const Users = () => {
 
   const handleSaveUser = async () => {
     if (!activeUser) return;
+    const shouldSavePermissions = userDialogMode === "edit" && isAdmin;
+    setIsSavingPermissions(shouldSavePermissions);
 
-    if (userDialogMode === "edit" && isAdmin && activeUser.authUserId) {
-      setIsSavingPermissions(true);
-    }
+    try {
+      const usersTable = sb.from("users");
+      const targetColumn = activeUser.dbId ? "id" : "user_code";
+      const targetValue = activeUser.dbId ?? activeUser.id;
+      const updateUser = usersTable.update.bind(usersTable) as unknown as ((
+        values: TablesUpdate<"users">
+      ) => {
+        eq: (
+          column: string,
+          value: string
+        ) => Promise<{ error: PostgrestError | null }>;
+      });
 
-    const usersTable = sb.from("users");
-    const targetColumn = activeUser.dbId ? "id" : "user_code";
-    const targetValue = activeUser.dbId ?? activeUser.id;
-    const updateUser = usersTable.update as unknown as ((
-      values: TablesUpdate<"users">
-    ) => {
-      eq: (
-        column: string,
-        value: string
-      ) => Promise<{ error: PostgrestError | null }>;
-    });
+      const { error } = await updateUser({
+        role: editForm.role,
+        department: editForm.department,
+        status: editForm.status,
+      }).eq(targetColumn, targetValue);
 
-    const { error } = await updateUser({
-      role: editForm.role,
-      department: editForm.department,
-      status: editForm.status,
-    }).eq(targetColumn, targetValue);
+      if (error) {
+        toast.error("Failed to update user", { description: error.message });
+        return;
+      }
 
-    if (error) {
-      toast.error("Failed to update user", { description: error.message });
-      setIsSavingPermissions(false);
-      return;
-    }
+      // Admin-only: also persist permissions + page access edits
+      if (shouldSavePermissions) {
+        if (!activeUser.authUserId) {
+          toast.error("Missing auth_user_id for permissions update.");
+          return;
+        }
 
-    // Admin-only: also persist permissions + page access edits
-    if (userDialogMode === "edit" && isAdmin && activeUser.authUserId) {
-      const userId = activeUser.authUserId;
-      const permsTable = sb.from("user_permissions");
-      const accessTable = sb.from("user_page_access");
+        const userId = activeUser.authUserId;
+        const permsTable = sb.from("user_permissions");
+        const accessTable = sb.from("user_page_access");
 
-      const upsertPermissions = permsTable.upsert as unknown as ((
-        values: TablesInsert<"user_permissions">,
-        options: { onConflict: string }
-      ) => Promise<{ error: PostgrestError | null }>);
+        const upsertPermissions = permsTable.upsert.bind(permsTable) as unknown as ((
+          values: TablesInsert<"user_permissions">,
+          options: { onConflict: string }
+        ) => Promise<{ error: PostgrestError | null }>);
 
-      const { error: permsError } = await upsertPermissions(
-        {
+        const { error: permsError } = await upsertPermissions(
+          {
+            user_id: userId,
+            user_name: activeUser.name,
+            user_email: activeUser.email,
+            can_export_data: permissions.canExportData,
+            can_import_data: permissions.canImportData,
+            can_manage_users: permissions.canManageUsers,
+            can_view_reports: permissions.canViewReports,
+            can_manage_settings: permissions.canManageSettings,
+            can_approve_requests: permissions.canApproveRequests,
+            can_bulk_operations: permissions.canBulkOperations,
+          },
+          { onConflict: "user_id" }
+        );
+
+        if (permsError) {
+          toast.error("Failed to update permissions", { description: permsError.message });
+          return;
+        }
+
+        const rows = pageAccess.map((a) => ({
           user_id: userId,
           user_name: activeUser.name,
           user_email: activeUser.email,
-          can_export_data: permissions.canExportData,
-          can_import_data: permissions.canImportData,
-          can_manage_users: permissions.canManageUsers,
-          can_view_reports: permissions.canViewReports,
-          can_manage_settings: permissions.canManageSettings,
-          can_approve_requests: permissions.canApproveRequests,
-          can_bulk_operations: permissions.canBulkOperations,
-        },
-        { onConflict: "user_id" }
-      );
+          page: a.page.trim().toLowerCase(),
+          can_view: a.canView,
+          can_edit: a.canEdit,
+          can_delete: a.canDelete,
+          can_create: a.canCreate,
+        }));
 
-      if (permsError) {
-        toast.error("Failed to update permissions", { description: permsError.message });
-        setIsSavingPermissions(false);
-        return;
+        const upsertPageAccess = accessTable.upsert.bind(accessTable) as unknown as ((
+          values: TablesInsert<"user_page_access">[],
+          options: { onConflict: string }
+        ) => Promise<{ error: PostgrestError | null }>);
+
+        const { error: accessError } = await upsertPageAccess(rows, { onConflict: "user_id,page" });
+        if (accessError) {
+          toast.error("Failed to update page access", { description: accessError.message });
+          return;
+        }
       }
 
-      const rows = pageAccess.map((a) => ({
-        user_id: userId,
-        user_name: activeUser.name,
-        user_email: activeUser.email,
-        page: a.page,
-        can_view: a.canView,
-        can_edit: a.canEdit,
-        can_delete: a.canDelete,
-        can_create: a.canCreate,
-      }));
-
-      const upsertPageAccess = accessTable.upsert as unknown as ((
-        values: TablesInsert<"user_page_access">[],
-        options: { onConflict: string }
-      ) => Promise<{ error: PostgrestError | null }>);
-
-      const { error: accessError } = await upsertPageAccess(rows, { onConflict: "user_id,page" });
-      if (accessError) {
-        toast.error("Failed to update page access", { description: accessError.message });
-        setIsSavingPermissions(false);
-        return;
-      }
+      toast.success("User updated");
+      setIsUserDialogOpen(false);
+      fetchUsers();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error("Failed to save user", { description: message });
+    } finally {
+      setIsSavingPermissions(false);
     }
-
-    toast.success("User updated");
-    setIsSavingPermissions(false);
-    setIsUserDialogOpen(false);
-    fetchUsers();
   };
 
   const handleDeleteUser = async () => {

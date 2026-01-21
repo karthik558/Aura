@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  FileBarChart, 
-  Ticket, 
-  Users
+import {
+  LayoutDashboard,
+  ClipboardList,
+  FileBarChart,
+  Ticket,
+  Users,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserAccess } from "@/context/UserAccessContext";
@@ -16,6 +17,7 @@ const navItems = [
   { icon: FileBarChart, path: "/reports", label: "Reports", pageId: "reports" },
   { icon: Ticket, path: "/tickets", label: "Tickets", pageId: "tickets" },
   { icon: Users, path: "/users", label: "Users", pageId: "users" },
+  { icon: Activity, path: "/system-status", label: "Status", pageId: "system-status" },
 ];
 
 export function MobileBottomNav() {

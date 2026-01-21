@@ -55,10 +55,6 @@ function AppLayoutContent() {
     const pageId = pageIdByPath[location.pathname];
     if (!pageId) return;
     if (isAdmin) return;
-    if (pageId === "system-status") {
-      navigate(firstAllowedPath, { replace: true });
-      return;
-    }
     if (!canViewPage(pageId)) {
       navigate(firstAllowedPath, { replace: true });
     }

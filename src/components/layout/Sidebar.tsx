@@ -56,6 +56,7 @@ const mainNavItems = [
 const systemNavItems = [
   { icon: Users, label: "Users", path: "/users", pageId: "users" },
   { icon: Settings, label: "Settings", path: "/settings", pageId: "settings" },
+  { icon: Activity, label: "System Status", path: "/system-status", pageId: "system-status" },
 ];
 
 const quickLinks = [
