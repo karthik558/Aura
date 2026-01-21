@@ -131,11 +131,16 @@ function MobileStatusUpdatePopover({ currentStatus, itemId, onStatusChange }: St
 
 export function PendingItemsTable() {
   const [permits, setPermits] = useState<Permit[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchPermits = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!isMounted) return;
+      setCurrentUserId(userData.user?.id ?? null);
+
       const permitsTable = supabase.from("permits") as any;
       const { data, error } = await permitsTable
         .select("*")
@@ -160,7 +165,10 @@ export function PendingItemsTable() {
         status: permit.status,
         uploaded: permit.uploaded,
         lastUpdated: permit.last_updated_at ?? permit.updated_at,
-        updatedBy: "",
+        updatedBy:
+          (permit.updated_by_name && permit.updated_by_email)
+            ? `${permit.updated_by_name} (${permit.updated_by_email})`
+            : (permit.updated_by_name || permit.updated_by_email || permit.created_by_name || permit.created_by_email || ""),
         trackingHistory: [],
       }));
 
@@ -222,6 +230,7 @@ export function PendingItemsTable() {
         status: newStatus,
         uploaded: newStatus === "uploaded",
         last_updated_at: new Date().toISOString(),
+        updated_by: currentUserId,
       })
       .eq(targetColumn, targetId);
 

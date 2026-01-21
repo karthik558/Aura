@@ -106,6 +106,13 @@ const Tracker = () => {
     passportNo: "",
     status: "pending" as Permit["status"],
   });
+
+  const formatUserLabel = (name?: string | null, email?: string | null, fallback?: string | null) => {
+    if (name && email) return `${name} (${email})`;
+    if (name) return name;
+    if (email) return email;
+    return fallback ?? "";
+  };
   
   useDocumentTitle("Tracker");
 
@@ -142,7 +149,11 @@ const Tracker = () => {
         status: permit.status,
         uploaded: permit.uploaded,
         lastUpdated: permit.last_updated_at ?? permit.updated_at,
-        updatedBy: "",
+        updatedBy: formatUserLabel(
+          permit.updated_by_name ?? permit.created_by_name,
+          permit.updated_by_email ?? permit.created_by_email,
+          permit.updated_by ?? permit.created_by ?? ""
+        ),
         trackingHistory: [],
       }));
 
@@ -202,7 +213,11 @@ const Tracker = () => {
       status: data.status,
       uploaded: data.uploaded,
       lastUpdated: data.last_updated_at ?? data.updated_at,
-      updatedBy: "",
+      updatedBy: formatUserLabel(
+        data.updated_by_name ?? data.created_by_name,
+        data.updated_by_email ?? data.created_by_email,
+        data.updated_by ?? data.created_by ?? ""
+      ),
       trackingHistory: [],
     };
 
@@ -258,7 +273,11 @@ const Tracker = () => {
       status: permit.status,
       uploaded: permit.uploaded,
       lastUpdated: permit.last_updated_at ?? permit.updated_at,
-      updatedBy: "Import",
+      updatedBy: formatUserLabel(
+        permit.updated_by_name ?? permit.created_by_name,
+        permit.updated_by_email ?? permit.created_by_email,
+        permit.updated_by ?? permit.created_by ?? ""
+      ),
       trackingHistory: [],
     }));
 
@@ -294,7 +313,7 @@ const Tracker = () => {
   const handlePermitSave = async (updatedPermit: Permit) => {
     const targetId = updatedPermit.dbId ?? updatedPermit.permitCode ?? updatedPermit.id;
     const permitsTable = supabase.from("permits") as any;
-    const { error } = await permitsTable
+    const { data, error } = await permitsTable
       .update({
         guest_name: updatedPermit.guestName,
         arrival_date: updatedPermit.arrivalDate,
@@ -304,6 +323,7 @@ const Tracker = () => {
         status: updatedPermit.status,
         uploaded: updatedPermit.uploaded,
         last_updated_at: new Date().toISOString(),
+        updated_by: currentUserId,
       })
       .eq(updatedPermit.dbId ? "id" : "permit_code", targetId)
       .select()
@@ -314,7 +334,32 @@ const Tracker = () => {
       return;
     }
 
-    setPermits(prev => prev.map(p => p.id === updatedPermit.id ? updatedPermit : p));
+    if (data) {
+      const mappedPermit: Permit = {
+        id: data.permit_code ?? data.id,
+        dbId: data.id,
+        permitCode: data.permit_code ?? undefined,
+        guestName: data.guest_name,
+        arrivalDate: data.arrival_date,
+        departureDate: data.departure_date,
+        nationality: data.nationality ?? "",
+        passportNo: data.passport_no ?? "",
+        status: data.status,
+        uploaded: data.uploaded,
+        lastUpdated: data.last_updated_at ?? data.updated_at,
+        updatedBy: formatUserLabel(
+          data.updated_by_name ?? data.created_by_name,
+          data.updated_by_email ?? data.created_by_email,
+          data.updated_by ?? data.created_by ?? ""
+        ),
+        trackingHistory: updatedPermit.trackingHistory,
+      };
+      setPermits((prev) => prev.map((p) => (p.id === updatedPermit.id ? mappedPermit : p)));
+      setDetailViewPermit(mappedPermit);
+      return;
+    }
+
+    setPermits((prev) => prev.map((p) => (p.id === updatedPermit.id ? updatedPermit : p)));
     setDetailViewPermit(updatedPermit);
   };
 
