@@ -35,29 +35,54 @@ function StatusUpdatePopover({ currentStatus, itemId, onStatusChange }: StatusUp
     setOpen(false);
   };
 
+  const currentOption = statusOptions.find(opt => opt.value === currentStatus);
+  const CurrentIcon = currentOption?.icon || Clock;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button size="sm" className="h-8 px-3 rounded-lg gap-1.5 bg-primary hover:bg-primary/90">
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span className="hidden lg:inline text-xs">Update</span>
+        <Button 
+          size="sm" 
+          variant="outline"
+          className={cn(
+            "h-8 px-2.5 rounded-lg gap-1.5 border-border/60 hover:bg-muted/50 transition-all",
+            "text-xs font-medium"
+          )}
+        >
+          <CurrentIcon className={cn(
+            "w-3.5 h-3.5",
+            currentStatus === "pending" && "text-warning",
+            currentStatus === "approved" && "text-success",
+            currentStatus === "rejected" && "text-danger",
+            currentStatus === "uploaded" && "text-primary"
+          )} />
+          <span className="hidden sm:inline">Change</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2" align="end">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground px-2 pb-1">Update Status</p>
+      <PopoverContent className="w-52 p-1.5" align="end">
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-semibold text-muted-foreground px-2.5 py-1.5 uppercase tracking-wider">Update Status</p>
           {statusOptions.map((option) => {
             const Icon = option.icon;
+            const isSelected = currentStatus === option.value;
             return (
               <button
                 key={option.value}
                 onClick={() => handleStatusSelect(option.value)}
                 className={cn(
-                  "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted",
-                  currentStatus === option.value && "bg-muted"
+                  "w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm transition-all",
+                  isSelected 
+                    ? "bg-primary/10 text-foreground" 
+                    : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-7 h-7 rounded-lg flex items-center justify-center",
+                  option.value === "pending" && "bg-warning/10",
+                  option.value === "approved" && "bg-success/10",
+                  option.value === "rejected" && "bg-danger/10",
+                  option.value === "uploaded" && "bg-primary/10"
+                )}>
                   <Icon className={cn(
                     "w-3.5 h-3.5",
                     option.value === "pending" && "text-warning",
@@ -65,10 +90,10 @@ function StatusUpdatePopover({ currentStatus, itemId, onStatusChange }: StatusUp
                     option.value === "rejected" && "text-danger",
                     option.value === "uploaded" && "text-primary"
                   )} />
-                  <span>{option.label}</span>
                 </div>
-                {currentStatus === option.value && (
-                  <Check className="w-3.5 h-3.5 text-primary" />
+                <span className="flex-1 text-left font-medium">{option.label}</span>
+                {isSelected && (
+                  <Check className="w-4 h-4 text-primary" />
                 )}
               </button>
             );
@@ -87,28 +112,50 @@ function MobileStatusUpdatePopover({ currentStatus, itemId, onStatusChange }: St
     setOpen(false);
   };
 
+  const currentOption = statusOptions.find(opt => opt.value === currentStatus);
+  const CurrentIcon = currentOption?.icon || Clock;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button size="sm" className="h-8 w-8 p-0 rounded-lg bg-primary hover:bg-primary/90">
-          <RefreshCw className="w-3.5 h-3.5" />
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="h-8 w-8 p-0 rounded-lg border-border/60"
+        >
+          <CurrentIcon className={cn(
+            "w-4 h-4",
+            currentStatus === "pending" && "text-warning",
+            currentStatus === "approved" && "text-success",
+            currentStatus === "rejected" && "text-danger",
+            currentStatus === "uploaded" && "text-primary"
+          )} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2" align="end">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground px-2 pb-1">Update Status</p>
+      <PopoverContent className="w-52 p-1.5" align="end">
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-semibold text-muted-foreground px-2.5 py-1.5 uppercase tracking-wider">Update Status</p>
           {statusOptions.map((option) => {
             const Icon = option.icon;
+            const isSelected = currentStatus === option.value;
             return (
               <button
                 key={option.value}
                 onClick={() => handleStatusSelect(option.value)}
                 className={cn(
-                  "w-full flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted",
-                  currentStatus === option.value && "bg-muted"
+                  "w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm transition-all",
+                  isSelected 
+                    ? "bg-primary/10 text-foreground" 
+                    : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-7 h-7 rounded-lg flex items-center justify-center",
+                  option.value === "pending" && "bg-warning/10",
+                  option.value === "approved" && "bg-success/10",
+                  option.value === "rejected" && "bg-danger/10",
+                  option.value === "uploaded" && "bg-primary/10"
+                )}>
                   <Icon className={cn(
                     "w-3.5 h-3.5",
                     option.value === "pending" && "text-warning",
@@ -116,10 +163,10 @@ function MobileStatusUpdatePopover({ currentStatus, itemId, onStatusChange }: St
                     option.value === "rejected" && "text-danger",
                     option.value === "uploaded" && "text-primary"
                   )} />
-                  <span>{option.label}</span>
                 </div>
-                {currentStatus === option.value && (
-                  <Check className="w-3.5 h-3.5 text-primary" />
+                <span className="flex-1 text-left font-medium">{option.label}</span>
+                {isSelected && (
+                  <Check className="w-4 h-4 text-primary" />
                 )}
               </button>
             );

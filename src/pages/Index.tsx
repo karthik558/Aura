@@ -182,12 +182,12 @@ const Index = () => {
 
         {/* Stats Grid */}
         <div className="p-4 pt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="stat-card-compact">
+          <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <FileText className="w-5 h-5 text-primary" />
               </div>
-              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
                 +{stats.totalThisWeek}
               </span>
             </div>
@@ -195,42 +195,42 @@ const Index = () => {
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">Total Applied</p>
           </div>
 
-          <div className="stat-card-compact">
+          <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center">
-                <Clock className="w-4 h-4 text-warning" />
+              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Clock className="w-5 h-5 text-warning" />
               </div>
             </div>
             <p className="text-2xl font-bold tracking-tight text-warning">{stats.pending}</p>
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">Pending Approval</p>
           </div>
 
-          <div className="stat-card-compact">
+          <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-9 h-9 rounded-xl bg-danger/10 flex items-center justify-center">
-                <XCircle className="w-4 h-4 text-danger" />
+              <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <XCircle className="w-5 h-5 text-danger" />
               </div>
             </div>
             <p className="text-2xl font-bold tracking-tight text-danger">{stats.rejected}</p>
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">Rejected</p>
           </div>
 
-          <div className="stat-card-compact">
+          <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-9 h-9 rounded-xl bg-info/10 flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-info" />
+              <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <AlertTriangle className="w-5 h-5 text-info" />
               </div>
             </div>
             <p className="text-2xl font-bold tracking-tight">{stats.pendingUpdates}</p>
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">Pending Updates</p>
           </div>
 
-          <div className="stat-card-compact col-span-2 sm:col-span-1">
+          <div className="relative bg-card rounded-xl border border-border p-4 col-span-2 sm:col-span-1 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-9 h-9 rounded-xl bg-success/10 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4 text-success" />
+              <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <CheckCircle2 className="w-5 h-5 text-success" />
               </div>
-              <span className="text-[10px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg">
+              <span className="text-[10px] font-bold text-success bg-success/10 px-2 py-1 rounded-full">
                 +{stats.uploadedThisWeek}
               </span>
             </div>

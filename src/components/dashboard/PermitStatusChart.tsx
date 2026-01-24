@@ -123,14 +123,14 @@ export function PermitBarChart() {
     });
   }, [permits]);
   return (
-    <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-5">
         <div>
           <h3 className="text-base font-semibold text-foreground">Weekly Activity</h3>
           <p className="text-xs text-muted-foreground mt-1">Status breakdown by day</p>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/10 text-success">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-success/10 text-success border border-success/20">
           <TrendingUp className="w-3.5 h-3.5" />
           <span className="text-[10px] font-bold">+12.5%</span>
         </div>
@@ -139,30 +139,30 @@ export function PermitBarChart() {
       {/* Chart */}
       <div className="flex-1 min-h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={barData} barGap={2} barSize={10}>
+          <BarChart data={barData} barGap={4} barSize={12}>
             <defs>
               <linearGradient id="pendingGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--warning))" stopOpacity={1} />
-                <stop offset="100%" stopColor="hsl(var(--warning))" stopOpacity={0.7} />
+                <stop offset="0%" stopColor="hsl(var(--warning))" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(var(--warning))" stopOpacity={0.6} />
               </linearGradient>
               <linearGradient id="approvedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={1} />
-                <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0.7} />
+                <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0.6} />
               </linearGradient>
               <linearGradient id="uploadedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.7} />
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
               </linearGradient>
               <linearGradient id="rejectedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--danger))" stopOpacity={1} />
-                <stop offset="100%" stopColor="hsl(var(--danger))" stopOpacity={0.7} />
+                <stop offset="0%" stopColor="hsl(var(--danger))" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="hsl(var(--danger))" stopOpacity={0.6} />
               </linearGradient>
             </defs>
             <CartesianGrid 
               strokeDasharray="3 3" 
               stroke="hsl(var(--border))" 
               vertical={false}
-              strokeOpacity={0.5}
+              strokeOpacity={0.6}
             />
             <XAxis 
               dataKey="name" 
@@ -178,26 +178,26 @@ export function PermitBarChart() {
               dx={-10}
               width={30}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.2)", radius: 4 }} />
-            <Bar dataKey="pending" name="Pending" fill="url(#pendingGradient)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="approved" name="Approved" fill="url(#approvedGradient)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="uploaded" name="Uploaded" fill="url(#uploadedGradient)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="rejected" name="Rejected" fill="url(#rejectedGradient)" radius={[4, 4, 0, 0]} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.3)", radius: 6 }} />
+            <Bar dataKey="pending" name="Pending" fill="url(#pendingGradient)" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="approved" name="Approved" fill="url(#approvedGradient)" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="uploaded" name="Uploaded" fill="url(#uploadedGradient)" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="rejected" name="Rejected" fill="url(#rejectedGradient)" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
       
       {/* Legend */}
-      <div className="flex items-center justify-center gap-5 mt-auto pt-5 flex-wrap">
+      <div className="flex items-center justify-center gap-4 mt-auto pt-5 flex-wrap">
         {[
-          { label: "Pending", color: "bg-warning" },
-          { label: "Approved", color: "bg-success" },
-          { label: "Uploaded", color: "bg-primary" },
-          { label: "Rejected", color: "bg-danger" },
+          { label: "Pending", color: "bg-warning", border: "border-warning/30" },
+          { label: "Approved", color: "bg-success", border: "border-success/30" },
+          { label: "Uploaded", color: "bg-primary", border: "border-primary/30" },
+          { label: "Rejected", color: "bg-danger", border: "border-danger/30" },
         ].map((item) => (
-          <div key={item.label} className="flex items-center gap-2">
-            <span className={cn("w-2.5 h-2.5 rounded-full", item.color)} />
-            <span className="text-[11px] text-muted-foreground font-medium">{item.label}</span>
+          <div key={item.label} className={cn("flex items-center gap-2 px-2.5 py-1 rounded-full border", item.border)}>
+            <span className={cn("w-2 h-2 rounded-full", item.color)} />
+            <span className="text-[10px] text-muted-foreground font-medium">{item.label}</span>
           </div>
         ))}
       </div>
@@ -252,28 +252,32 @@ export function PermitPieChart() {
   const total = pieData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">Status Distribution</h3>
           <p className="text-xs text-muted-foreground mt-1">Current breakdown</p>
         </div>
+        <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+          <span className="text-xs font-bold text-muted-foreground">{pieData.length}</span>
+        </div>
       </div>
 
       {/* Chart with center text */}
-      <div className="relative h-[200px] flex-shrink-0">
+      <div className="relative h-[180px] flex-shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={85}
-              paddingAngle={3}
+              innerRadius={55}
+              outerRadius={80}
+              paddingAngle={4}
               dataKey="value"
-              strokeWidth={0}
+              stroke="hsl(var(--card))"
+              strokeWidth={3}
               animationBegin={0}
               animationDuration={800}
             >
@@ -281,7 +285,8 @@ export function PermitPieChart() {
                 <Cell 
                   key={`cell-${index}`} 
                   fill={entry.color}
-                  className="transition-all duration-200 hover:opacity-80"
+                  className="transition-all duration-200 hover:opacity-80 cursor-pointer"
+                  style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))" }}
                 />
               ))}
             </Pie>
@@ -290,31 +295,31 @@ export function PermitPieChart() {
         </ResponsiveContainer>
         {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl font-bold text-foreground">{total}</span>
-          <span className="text-[10px] text-muted-foreground font-medium">Total</span>
+          <span className="text-3xl font-bold text-foreground">{total}</span>
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Total</span>
         </div>
       </div>
       
       {/* Legend Cards */}
-      <div className="grid grid-cols-2 gap-2 mt-4 flex-1">
+      <div className="grid grid-cols-2 gap-2.5 mt-5 flex-1">
         {pieData.map((item, index) => (
           <motion.div 
             key={item.name} 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-default"
+            className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition-all duration-200 cursor-default"
           >
             <div 
-              className="w-3 h-3 rounded-full flex-shrink-0" 
-              style={{ backgroundColor: item.color }}
+              className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-2 ring-offset-card" 
+              style={{ backgroundColor: item.color, ringColor: item.color }}
             />
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] text-muted-foreground block truncate font-medium">{item.name}</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-bold text-foreground">{item.value}</span>
-                <span className="text-[9px] text-muted-foreground">({item.percentage}%)</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-base font-bold text-foreground">{item.value}</span>
+                <span className="text-[10px] text-muted-foreground font-medium">({item.percentage}%)</span>
               </div>
+              <span className="text-[10px] text-muted-foreground block truncate font-medium">{item.name}</span>
             </div>
           </motion.div>
         ))}
