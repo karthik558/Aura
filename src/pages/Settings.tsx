@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Bell, 
   Shield, 
@@ -13,7 +13,21 @@ import {
   UserCog,
   PanelLeftClose,
   Pin,
-  PanelTop
+  PanelTop,
+  ChevronRight,
+  Sun,
+  Moon,
+  Laptop,
+  Mail,
+  BellRing,
+  Key,
+  Fingerprint,
+  Clock,
+  Smartphone,
+  LogIn,
+  Lock,
+  MailCheck,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +41,6 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -35,6 +48,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useTheme } from "@/components/ThemeProvider";
 import { useLayoutSettings } from "@/hooks/useLayoutSettings";
 import { cn } from "@/lib/utils";
@@ -48,30 +64,63 @@ import { useUserAccess } from "@/context/UserAccessContext";
 import type { SupabaseClient, PostgrestError } from "@supabase/supabase-js";
 import type { Database, TablesInsert } from "@/integrations/supabase/types";
 
+type SettingsSection = "profile" | "appearance" | "notifications" | "security";
+
+const settingsSections = [
+  { id: "profile" as const, label: "Profile", icon: User, description: "Manage your account details" },
+  { id: "appearance" as const, label: "Appearance", icon: Palette, description: "Customize your experience" },
+  { id: "notifications" as const, label: "Notifications", icon: Bell, description: "Configure alerts & updates" },
+  { id: "security" as const, label: "Security", icon: Shield, description: "Protect your account" },
+];
+
 const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.04 }
+    transition: { staggerChildren: 0.05 }
   }
 };
 
 const item = {
-  hidden: { opacity: 0, y: 8 },
+  hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0 }
+};
+
+const slideIn = {
+  hidden: { opacity: 0, x: 20 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  exit: { opacity: 0, x: -20, transition: { duration: 0.2 } }
 };
 
 function SettingsSkeleton() {
   return (
-    <div className="space-y-6 max-w-3xl">
-      <Skeleton className="h-6 w-24" />
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="bg-card rounded-xl border border-border p-5 space-y-4">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
+    <div className="flex flex-col lg:flex-row gap-6 w-full min-h-[calc(100vh-12rem)]">
+      {/* Sidebar Skeleton */}
+      <div className="w-full lg:w-64 xl:w-72 shrink-0">
+        <div className="lg:sticky lg:top-6 space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-xl" />
+          ))}
         </div>
-      ))}
+      </div>
+      {/* Content Skeleton */}
+      <div className="flex-1 space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -91,6 +140,7 @@ const Settings = () => {
     setStickyHeader, 
     setTopNavMode 
   } = useLayoutSettings();
+  const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
   const [userRole, setUserRole] = useState("user");
   const [profileName, setProfileName] = useState("");
   const [profileEmail, setProfileEmail] = useState("");
@@ -419,8 +469,8 @@ const Settings = () => {
       if (error) {
         reportSaveError("Failed to save settings", error);
 
-        const { error: updateError } = await sb
-          .from("user_settings")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: updateError } = await (sb.from("user_settings") as any)
           .update({
             theme: payload.theme,
             start_collapsed: payload.start_collapsed,
@@ -440,7 +490,8 @@ const Settings = () => {
         if (updateError) {
           reportSaveError("Failed to update settings", updateError);
 
-          const { error: insertError } = await sb.from("user_settings").insert(payload);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: insertError } = await (sb.from("user_settings") as any).insert(payload);
           if (insertError) {
             reportSaveError("Failed to create settings", insertError);
             console.error("Failed to save settings", insertError);
@@ -512,424 +563,667 @@ const Settings = () => {
     return <SettingsSkeleton />;
   }
 
+  // Settings Navigation Sidebar Item
+  const NavItem = ({ section }: { section: typeof settingsSections[number] }) => {
+    const isActive = activeSection === section.id;
+    return (
+      <button
+        onClick={() => setActiveSection(section.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200",
+          "hover:bg-accent/50 group",
+          isActive 
+            ? "bg-primary/10 text-primary border border-primary/20 shadow-sm" 
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <div className={cn(
+          "flex items-center justify-center w-10 h-10 rounded-lg transition-colors",
+          isActive ? "bg-primary/10" : "bg-muted/50 group-hover:bg-accent"
+        )}>
+          <section.icon className={cn("w-5 h-5", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={cn("font-medium text-sm truncate", isActive && "text-primary")}>{section.label}</p>
+          <p className="text-xs text-muted-foreground truncate hidden sm:block">{section.description}</p>
+        </div>
+        <ChevronRight className={cn(
+          "w-4 h-4 transition-transform shrink-0",
+          isActive ? "text-primary rotate-90" : "text-muted-foreground/50"
+        )} />
+      </button>
+    );
+  };
+
+  // Profile Section
+  const ProfileSection = () => (
+    <motion.div
+      key="profile"
+      variants={slideIn}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      className="space-y-6"
+    >
+      <div>
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Profile Settings</h2>
+        <p className="text-sm text-muted-foreground mt-1">Manage your personal information and role</p>
+      </div>
+
+      {/* Profile Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/10">
+                <User className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg sm:text-xl">{profileName || "Your Name"}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{profileEmail || "email@example.com"}</CardDescription>
+              </div>
+            </div>
+            <Badge 
+              variant={userRole === "admin" ? "default" : userRole === "manager" ? "secondary" : "outline"}
+              className="w-fit"
+            >
+              {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Full Name</Label>
+              <Input id="fullName" value={profileName} readOnly className="h-11 bg-muted/30" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Email Address</Label>
+              <Input id="email" value={profileEmail} readOnly className="h-11 bg-muted/30" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Role Information */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <UserCog className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Role & Permissions</CardTitle>
+          </div>
+          <CardDescription>Your current role determines your access level</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Current Role</Label>
+            <Select value={userRole} onValueChange={setUserRole} disabled>
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="p-4 rounded-lg bg-muted/30 border border-border">
+            <p className="text-sm text-muted-foreground">
+              {userRole === "admin" && "🔓 Full access to all features, settings, and user management capabilities."}
+              {userRole === "manager" && "📋 Can manage permits and users with limited settings access."}
+              {userRole === "user" && "✏️ Can create and edit your own permits and view reports."}
+              {userRole === "viewer" && "👁️ Read-only access to permits and reports."}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  // Appearance Section
+  const AppearanceSection = () => (
+    <motion.div
+      key="appearance"
+      variants={slideIn}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      className="space-y-6"
+    >
+      <div>
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Appearance</h2>
+        <p className="text-sm text-muted-foreground mt-1">Customize how Aura looks and feels</p>
+      </div>
+
+      {/* Theme Selection */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Palette className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Theme</CardTitle>
+          </div>
+          <CardDescription>Select your preferred color scheme</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { value: "light", label: "Light", icon: Sun, desc: "Bright & clean" },
+              { value: "dark", label: "Dark", icon: Moon, desc: "Easy on eyes" },
+              { value: "system", label: "System", icon: Laptop, desc: "Auto switch" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setTheme(option.value as "light" | "dark" | "system")}
+                className={cn(
+                  "relative flex flex-col items-center gap-2 p-4 sm:p-5 rounded-xl border-2 transition-all duration-200",
+                  theme === option.value 
+                    ? "border-primary bg-primary/5 shadow-md" 
+                    : "border-border hover:border-muted-foreground/30 hover:bg-accent/30"
+                )}
+              >
+                {theme === option.value && (
+                  <div className="absolute top-2 right-2">
+                    <Check className="w-4 h-4 text-primary" />
+                  </div>
+                )}
+                <div className={cn(
+                  "w-12 h-12 rounded-full flex items-center justify-center transition-colors",
+                  theme === option.value ? "bg-primary/10" : "bg-muted"
+                )}>
+                  <option.icon className={cn("w-6 h-6", theme === option.value ? "text-primary" : "text-muted-foreground")} />
+                </div>
+                <div className="text-center">
+                  <p className={cn("font-medium", theme === option.value && "text-primary")}>{option.label}</p>
+                  <p className="text-xs text-muted-foreground">{option.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Layout Behavior */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Layout className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Layout</CardTitle>
+          </div>
+          <CardDescription>Configure navigation and layout behavior</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <SettingToggle
+            icon={PanelLeftClose}
+            title="Collapsed Sidebar"
+            description="Start with sidebar collapsed on desktop"
+            checked={startCollapsed}
+            onCheckedChange={setStartCollapsed}
+          />
+          <Separator className="my-2" />
+          <SettingToggle
+            icon={Pin}
+            title="Sticky Header"
+            description="Keep header fixed when scrolling"
+            checked={stickyHeader}
+            onCheckedChange={setStickyHeader}
+          />
+          <Separator className="my-2" />
+          <SettingToggle
+            icon={PanelTop}
+            title="Top Navigation"
+            description="Use horizontal nav instead of sidebar"
+            checked={topNavMode}
+            onCheckedChange={setTopNavMode}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Customization */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Monitor className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Display</CardTitle>
+          </div>
+          <CardDescription>Fine-tune your display preferences</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Sidebar Style</Label>
+              <Select value={sidebarStyle} onValueChange={setSidebarStyle}>
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="compact">Compact</SelectItem>
+                  <SelectItem value="minimal">Minimal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Type className="w-3.5 h-3.5" />
+                Font Size
+              </Label>
+              <Select value={fontSize} onValueChange={setFontSize}>
+                <SelectTrigger className="h-11">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Small</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="large">Large</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Separator />
+          <SettingToggle
+            icon={Monitor}
+            title="Compact Mode"
+            description="Reduce spacing for denser content"
+            checked={compactMode}
+            onCheckedChange={setCompactMode}
+          />
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  // Setting Toggle Component
+  const SettingToggle = ({ 
+    icon: Icon, 
+    title, 
+    description, 
+    checked, 
+    onCheckedChange 
+  }: { 
+    icon: React.ElementType;
+    title: string;
+    description: string;
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+  }) => (
+    <div className="flex items-center justify-between py-3 px-1 hover:bg-accent/30 rounded-lg transition-colors -mx-1">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{title}</p>
+          <p className="text-xs text-muted-foreground truncate">{description}</p>
+        </div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} className="ml-3 shrink-0" />
+    </div>
+  );
+
+  // Notifications Section
+  const NotificationsSection = () => (
+    <motion.div
+      key="notifications"
+      variants={slideIn}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      className="space-y-6"
+    >
+      <div>
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Notifications</h2>
+        <p className="text-sm text-muted-foreground mt-1">Choose what updates you want to receive</p>
+      </div>
+
+      {/* Email Notifications */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Email Notifications</CardTitle>
+          </div>
+          <CardDescription>Manage your email preferences</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {[
+            { label: "Email notifications", desc: "Receive email alerts for important updates", key: "emailNotifications", icon: Mail },
+            { label: "Weekly digest", desc: "Get a summary of activity every week", key: "weeklyDigest", icon: MailCheck },
+            { label: "Marketing emails", desc: "Receive news and promotional content", key: "marketingEmails", icon: BellRing },
+          ].map((n, idx) => (
+            <div key={n.key}>
+              {idx > 0 && <Separator className="my-2" />}
+              <SettingToggle
+                icon={n.icon}
+                title={n.label}
+                description={n.desc}
+                checked={emailNotifications[n.key as keyof typeof emailNotifications]}
+                onCheckedChange={(checked) =>
+                  setEmailNotifications((prev) => ({ ...prev, [n.key]: checked }))
+                }
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Push Notifications */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <BellRing className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Push Notifications</CardTitle>
+          </div>
+          <CardDescription>Real-time alerts and reminders</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {[
+            { label: "Pending reminders", desc: "Daily reminder for pending uploads", key: "pendingReminders", icon: Clock },
+            { label: "Critical alerts", desc: "Immediate alerts for urgent issues", key: "criticalAlerts", icon: Bell },
+            { label: "Status changes", desc: "Notify when permit status changes", key: "statusChanges", icon: BellRing },
+            { label: "Comments & mentions", desc: "Get notified when someone mentions you", key: "commentsMentions", icon: User },
+          ].map((n, idx) => (
+            <div key={n.key}>
+              {idx > 0 && <Separator className="my-2" />}
+              <SettingToggle
+                icon={n.icon}
+                title={n.label}
+                description={n.desc}
+                checked={pushNotifications[n.key as keyof typeof pushNotifications]}
+                onCheckedChange={(checked) =>
+                  setPushNotifications((prev) => ({ ...prev, [n.key]: checked }))
+                }
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
+  // Security Section
+  const SecuritySection = () => (
+    <motion.div
+      key="security"
+      variants={slideIn}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      className="space-y-6"
+    >
+      <div>
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Security</h2>
+        <p className="text-sm text-muted-foreground mt-1">Keep your account safe and secure</p>
+      </div>
+
+      {/* Authentication */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Key className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Authentication</CardTitle>
+          </div>
+          <CardDescription>Extra layers of account protection</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <SettingToggle
+            icon={Shield}
+            title="Two-factor authentication"
+            description="Add an extra layer of security"
+            checked={securityPreferences.twoFactor}
+            onCheckedChange={(checked) =>
+              setSecurityPreferences((prev) => ({ ...prev, twoFactor: checked }))
+            }
+          />
+          <Separator className="my-2" />
+          <SettingToggle
+            icon={Fingerprint}
+            title="Biometric login"
+            description="Use fingerprint or face recognition"
+            checked={securityPreferences.biometric}
+            onCheckedChange={(checked) =>
+              setSecurityPreferences((prev) => ({ ...prev, biometric: checked }))
+            }
+          />
+        </CardContent>
+      </Card>
+
+      {/* Session Management */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Session Management</CardTitle>
+          </div>
+          <CardDescription>Control your login sessions</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-1 hover:bg-accent/30 rounded-lg transition-colors -mx-1 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Session timeout</p>
+                <p className="text-xs text-muted-foreground">Auto logout after inactivity</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:ml-3">
+              <Input
+                value={securityPreferences.sessionTimeout}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  if (Number.isNaN(value)) return;
+                  setSecurityPreferences((prev) => ({
+                    ...prev,
+                    sessionTimeout: Math.max(5, Math.min(240, value)),
+                  }));
+                }}
+                className="w-20 h-9 text-center"
+                inputMode="numeric"
+              />
+              <span className="text-sm text-muted-foreground">minutes</span>
+            </div>
+          </div>
+          <Separator />
+          <SettingToggle
+            icon={Smartphone}
+            title="Remember device"
+            description="Stay logged in on trusted devices"
+            checked={securityPreferences.rememberDevice}
+            onCheckedChange={(checked) =>
+              setSecurityPreferences((prev) => ({ ...prev, rememberDevice: checked }))
+            }
+          />
+          <Separator />
+          <SettingToggle
+            icon={LogIn}
+            title="Login alerts"
+            description="Get notified of new sign-ins"
+            checked={securityPreferences.loginAlerts}
+            onCheckedChange={(checked) =>
+              setSecurityPreferences((prev) => ({ ...prev, loginAlerts: checked }))
+            }
+          />
+        </CardContent>
+      </Card>
+
+      {/* Password & Recovery */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Password & Recovery</CardTitle>
+          </div>
+          <CardDescription>Manage your password and recovery options</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-accent/50"
+              onClick={() => setIsChangePasswordOpen(true)}
+            >
+              <Key className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm">Change Password</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-accent/50"
+            >
+              <MailCheck className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm">Recovery Email</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center gap-2 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+            >
+              <Eye className="w-5 h-5" />
+              <span className="text-sm">Active Sessions</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
   return (
     <motion.div 
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-6 max-w-3xl"
+      className="w-full"
     >
-      <Breadcrumbs />
-      <motion.div variants={item}>
-        <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage application preferences</p>
+      {/* Breadcrumbs */}
+      <motion.div variants={item} className="mb-6">
+        <Breadcrumbs />
       </motion.div>
 
-      {/* Profile & Role */}
-      <motion.div variants={item} className="bg-card rounded-xl border border-border p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <User className="w-4 h-4" />
-            Profile
-          </div>
-          <Badge variant={userRole === "admin" ? "default" : userRole === "manager" ? "secondary" : "outline"}>
-            {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-          </Badge>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName" className="text-xs">Full Name</Label>
-            <Input id="fullName" value={profileName} readOnly className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs">Email</Label>
-            <Input id="email" value={profileEmail} readOnly className="h-9" />
-          </div>
-        </div>
+      {/* Page Header */}
+      <motion.div variants={item} className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your account and application preferences</p>
       </motion.div>
 
-      {/* User Role */}
-      <motion.div variants={item} className="bg-card rounded-xl border border-border p-5 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <UserCog className="w-4 h-4" />
-          User Role
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Current Role</Label>
-          <Select value={userRole} onValueChange={setUserRole} disabled>
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="manager">Manager</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-              <SelectItem value="viewer">Viewer</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground mt-2">
-            {userRole === "admin" && "Full access to all features and settings"}
-            {userRole === "manager" && "Can manage permits and users, limited settings access"}
-            {userRole === "user" && "Can create and edit own permits"}
-            {userRole === "viewer" && "Read-only access to permits and reports"}
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Tabs for Personalization, Notifications, Security */}
-      <motion.div variants={item}>
-        <Tabs defaultValue="personalization" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="personalization" className="gap-2">
-              <Palette className="w-4 h-4" />
-              <span className="hidden sm:inline">Personalization</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2">
-              <Bell className="w-4 h-4" />
-              <span className="hidden sm:inline">Notifications</span>
-            </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Security</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Personalization Tab */}
-          <TabsContent value="personalization" className="space-y-4">
-            {/* Appearance */}
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Palette className="w-4 h-4" />
-                Appearance
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: "light", label: "Light" },
-                  { value: "dark", label: "Dark" },
-                  { value: "system", label: "System" },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setTheme(option.value as "light" | "dark" | "system")}
-                    className={cn(
-                      "relative flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-all",
-                      theme === option.value 
-                        ? "border-primary bg-primary/5 text-primary" 
-                        : "border-border hover:border-muted-foreground/50 text-muted-foreground"
-                    )}
-                  >
-                    {theme === option.value && <Check className="w-3.5 h-3.5" />}
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Layout Behavior */}
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Layout className="w-4 h-4" />
-                Layout Behavior
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <PanelLeftClose className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Start Collapsed</p>
-                      <p className="text-xs text-muted-foreground">Sidebar starts in collapsed state</p>
-                    </div>
-                  </div>
-                  <Switch checked={startCollapsed} onCheckedChange={setStartCollapsed} />
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <Pin className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Sticky Header</p>
-                      <p className="text-xs text-muted-foreground">Keep header fixed while scrolling</p>
-                    </div>
-                  </div>
-                  <Switch checked={stickyHeader} onCheckedChange={setStickyHeader} />
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <PanelTop className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Top Nav Mode</p>
-                      <p className="text-xs text-muted-foreground">Use horizontal navigation instead of sidebar</p>
-                    </div>
-                  </div>
-                  <Switch checked={topNavMode} onCheckedChange={setTopNavMode} />
-                </div>
-              </div>
-            </div>
-
-            {/* Customization */}
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Monitor className="w-4 h-4" />
-                Customization
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sidebar Style</Label>
-                  <Select value={sidebarStyle} onValueChange={setSidebarStyle}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      <SelectItem value="compact">Compact</SelectItem>
-                      <SelectItem value="minimal">Minimal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    <Type className="w-3.5 h-3.5" />
-                    Font Size
-                  </Label>
-                  <Select value={fontSize} onValueChange={setFontSize}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="small">Small</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="large">Large</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <Monitor className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">Compact Mode</p>
-                      <p className="text-xs text-muted-foreground">Reduce spacing for more content</p>
-                    </div>
-                  </div>
-                  <Switch checked={compactMode} onCheckedChange={setCompactMode} />
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Notifications Tab */}
-          <TabsContent value="notifications" className="space-y-4">
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Bell className="w-4 h-4" />
-                Email Notifications
-              </div>
-              <div className="space-y-3">
-                {[
-                  { label: "Email notifications", desc: "Receive email alerts for important updates", key: "emailNotifications" },
-                  { label: "Weekly digest", desc: "Get a summary of activity every week", key: "weeklyDigest" },
-                  { label: "Marketing emails", desc: "Receive news and promotional content", key: "marketingEmails" },
-                ].map((n) => (
-                  <div key={n.key} className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium">{n.label}</p>
-                      <p className="text-xs text-muted-foreground">{n.desc}</p>
-                    </div>
-                    <Switch
-                      checked={emailNotifications[n.key as keyof typeof emailNotifications]}
-                      onCheckedChange={(checked) =>
-                        setEmailNotifications((prev) => ({ ...prev, [n.key]: checked }))
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Bell className="w-4 h-4" />
-                Push Notifications
-              </div>
-              <div className="space-y-3">
-                {[
-                  { label: "Pending reminders", desc: "Daily reminder for pending uploads", key: "pendingReminders" },
-                  { label: "Critical alerts", desc: "Immediate alerts for urgent issues", key: "criticalAlerts" },
-                  { label: "Status changes", desc: "Notify when permit status changes", key: "statusChanges" },
-                  { label: "Comments & mentions", desc: "Get notified when someone mentions you", key: "commentsMentions" },
-                ].map((n) => (
-                  <div key={n.key} className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium">{n.label}</p>
-                      <p className="text-xs text-muted-foreground">{n.desc}</p>
-                    </div>
-                    <Switch
-                      checked={pushNotifications[n.key as keyof typeof pushNotifications]}
-                      onCheckedChange={(checked) =>
-                        setPushNotifications((prev) => ({ ...prev, [n.key]: checked }))
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Security Tab */}
-          <TabsContent value="security" className="space-y-4">
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Shield className="w-4 h-4" />
-                Authentication
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Two-factor authentication</p>
-                    <p className="text-xs text-muted-foreground">Add an extra layer of security</p>
-                  </div>
-                  <Switch
-                    checked={securityPreferences.twoFactor}
-                    onCheckedChange={(checked) =>
-                      setSecurityPreferences((prev) => ({ ...prev, twoFactor: checked }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Biometric login</p>
-                    <p className="text-xs text-muted-foreground">Use fingerprint or face recognition</p>
-                  </div>
-                  <Switch
-                    checked={securityPreferences.biometric}
-                    onCheckedChange={(checked) =>
-                      setSecurityPreferences((prev) => ({ ...prev, biometric: checked }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Shield className="w-4 h-4" />
-                Session Management
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Session timeout</p>
-                    <p className="text-xs text-muted-foreground">Auto logout after inactivity</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={securityPreferences.sessionTimeout}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        if (Number.isNaN(value)) return;
-                        setSecurityPreferences((prev) => ({
-                          ...prev,
-                          sessionTimeout: Math.max(5, Math.min(240, value)),
-                        }));
-                      }}
-                      className="w-16 h-8 text-center"
-                      inputMode="numeric"
-                    />
-                    <span className="text-xs text-muted-foreground">min</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Remember device</p>
-                    <p className="text-xs text-muted-foreground">Stay logged in on trusted devices</p>
-                  </div>
-                  <Switch
-                    checked={securityPreferences.rememberDevice}
-                    onCheckedChange={(checked) =>
-                      setSecurityPreferences((prev) => ({ ...prev, rememberDevice: checked }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium">Login alerts</p>
-                    <p className="text-xs text-muted-foreground">Get notified of new sign-ins</p>
-                  </div>
-                  <Switch
-                    checked={securityPreferences.loginAlerts}
-                    onCheckedChange={(checked) =>
-                      setSecurityPreferences((prev) => ({ ...prev, loginAlerts: checked }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Shield className="w-4 h-4" />
-                Password & Recovery
-              </div>
-              <div className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setIsChangePasswordOpen(true)}
+      {/* Mobile Navigation Tabs */}
+      <motion.div variants={item} className="lg:hidden mb-6">
+        <ScrollArea className="w-full pb-2">
+          <div className="flex gap-2 min-w-max px-1">
+            {settingsSections.map((section) => {
+              const isActive = activeSection === section.id;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
+                    isActive 
+                      ? "bg-primary text-primary-foreground shadow-md" 
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
                 >
-                  Change Password
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  Set Recovery Email
-                </Button>
-                <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive">
-                  View Active Sessions
-                </Button>
-              </div>
+                  <section.icon className="w-4 h-4" />
+                  {section.label}
+                </button>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </motion.div>
+
+      {/* Main Layout */}
+      <motion.div variants={item} className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Desktop Sidebar Navigation */}
+        <div className="hidden lg:block w-64 xl:w-72 shrink-0">
+          <div className="sticky top-6 space-y-2">
+            {settingsSections.map((section) => (
+              <NavItem key={section.id} section={section} />
+            ))}
+            
+            {/* Save Button - Desktop */}
+            <div className="pt-4">
+              <Button 
+                className="w-full gap-2 h-12" 
+                onClick={() => saveSettings(false, getSettingsSnapshot())} 
+                disabled={isSavingSettings}
+              >
+                <Save className="w-4 h-4" />
+                {isSavingSettings ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          <AnimatePresence mode="wait">
+            {activeSection === "profile" && <ProfileSection />}
+            {activeSection === "appearance" && <AppearanceSection />}
+            {activeSection === "notifications" && <NotificationsSection />}
+            {activeSection === "security" && <SecuritySection />}
+          </AnimatePresence>
+
+          {/* Mobile Save Button */}
+          <motion.div variants={item} className="lg:hidden mt-8 pb-4">
+            <Button 
+              className="w-full gap-2 h-12" 
+              onClick={() => saveSettings(false, getSettingsSnapshot())} 
+              disabled={isSavingSettings}
+            >
+              <Save className="w-4 h-4" />
+              {isSavingSettings ? "Saving..." : "Save Changes"}
+            </Button>
+          </motion.div>
+        </div>
       </motion.div>
 
-      {/* Save */}
-      <motion.div variants={item} className="flex justify-end pt-2">
-        <Button className="gap-2" onClick={() => saveSettings(false, getSettingsSnapshot())} disabled={isSavingSettings}>
-          <Save className="w-4 h-4" />
-          {isSavingSettings ? "Saving..." : "Save Changes"}
-        </Button>
-      </motion.div>
-
+      {/* Change Password Dialog */}
       <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-[420px] mx-4">
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              Change Password
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="settingsNewPassword">New Password</Label>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="settingsNewPassword" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">New Password</Label>
               <Input
                 id="settingsNewPassword"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="At least 8 characters"
+                className="h-11"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="settingsConfirmPassword">Confirm Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="settingsConfirmPassword" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Confirm Password</Label>
               <Input
                 id="settingsConfirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat your password"
+                className="h-11"
               />
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
               <Button
                 variant="outline"
                 onClick={() => setIsChangePasswordOpen(false)}
                 disabled={isPasswordSaving}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
-              <Button onClick={handleChangePassword} disabled={isPasswordSaving}>
+              <Button 
+                onClick={handleChangePassword} 
+                disabled={isPasswordSaving}
+                className="w-full sm:w-auto"
+              >
                 {isPasswordSaving ? "Updating..." : "Update Password"}
               </Button>
             </div>
