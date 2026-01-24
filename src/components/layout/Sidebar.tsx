@@ -415,30 +415,48 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               side="right" 
               align="start"
               sideOffset={12}
-              className="w-72 p-3"
+              className="w-80 p-0 overflow-hidden border-border/60 shadow-xl"
             >
-              <p className="text-[10px] font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
-                External Links
-              </p>
-              <div className="space-y-1 mt-1">
-                {quickLinks.map((link) => (
+              {/* Header */}
+              <div className="px-4 py-3 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <ExternalLink className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Quick Links</p>
+                    <p className="text-[11px] text-muted-foreground">Access external resources</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Links */}
+              <div className="p-2">
+                {quickLinks.map((link, index) => (
                   <a
                     key={link.url}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/60 transition-all duration-200 group"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-accent/60 transition-all duration-200 group"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
-                      <link.icon className="w-4 h-4 text-primary" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 group-hover:from-primary/30 group-hover:to-primary/10 transition-all duration-200 shadow-sm">
+                      <link.icon className="w-5 h-5 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{link.name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{link.description}</p>
+                      <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{link.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{link.description}</p>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:bg-primary/10 transition-all duration-200">
+                      <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                    </div>
                   </a>
                 ))}
+              </div>
+              
+              {/* Footer */}
+              <div className="px-4 py-2.5 bg-muted/30 border-t border-border/40">
+                <p className="text-[10px] text-muted-foreground text-center">Links open in a new tab</p>
               </div>
             </PopoverContent>
           </Popover>
