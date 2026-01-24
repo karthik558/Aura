@@ -445,8 +445,8 @@ const Tickets = () => {
     if (!validateForm()) return;
 
     const ticketCode = `TKT-${Date.now()}`;
-    const { data, error } = await supabase
-      .from("tickets")
+    const { data, error } = await (supabase
+      .from("tickets") as any)
       .insert({
         ticket_code: ticketCode,
         title: formData.title.trim(),
@@ -460,8 +460,8 @@ const Tickets = () => {
       .select()
       .single();
 
-    if (error) {
-      toast.error("Ticket creation failed", { description: error.message });
+    if (error || !data) {
+      toast.error("Ticket creation failed", { description: error?.message ?? "Unknown error" });
       return;
     }
 
@@ -518,8 +518,8 @@ const Tickets = () => {
 
     const targetId = ticket.dbId ?? ticket.id;
     const targetColumn = ticket.dbId ? "id" : "ticket_code";
-    const { error } = await supabase
-      .from("tickets")
+    const { error } = await (supabase
+      .from("tickets") as any)
       .update({ status })
       .eq(targetColumn, targetId);
 
@@ -541,8 +541,8 @@ const Tickets = () => {
     }
 
     if (currentUserId) {
-      await supabase
-        .from("notifications")
+      await (supabase
+        .from("notifications") as any)
         .update({ read: true })
         .eq("user_id", currentUserId)
         .ilike("title", `%${ticket.id}%`);
@@ -554,12 +554,12 @@ const Tickets = () => {
       .order("created_at", { ascending: false });
     const uniqueUserIds = Array.from(new Set((data ?? []).map((comment) => comment.user_id).filter(Boolean)));
     if (uniqueUserIds.length) {
-      const { data: userData } = await supabase
-        .from("users")
+      const { data: userData } = await (supabase
+        .from("users") as any)
         .select("auth_user_id, name, email, avatar")
         .in("auth_user_id", uniqueUserIds);
       if (userData?.length) {
-        const mappedAuthors = userData.reduce<Record<string, { name: string; email: string | null; avatar: string | null }>>(
+        const mappedAuthors = (userData as Array<{ auth_user_id: string; name: string; email: string | null; avatar: string | null }>).reduce<Record<string, { name: string; email: string | null; avatar: string | null }>>(
           (acc, user) => {
             acc[user.auth_user_id] = {
               name: user.name,
@@ -587,8 +587,8 @@ const Tickets = () => {
       toast.error("Comment required", { description: "Please enter a comment." });
       return;
     }
-    const { data, error } = await supabase
-      .from("ticket_comments")
+    const { data, error } = await (supabase
+      .from("ticket_comments") as any)
       .insert({
         ticket_id: activeTicket.dbId,
         user_id: currentUserId,
@@ -597,8 +597,8 @@ const Tickets = () => {
       .select()
       .single();
 
-    if (error) {
-      toast.error("Failed to add comment", { description: error.message });
+    if (error || !data) {
+      toast.error("Failed to add comment", { description: error?.message ?? "Unknown error" });
       return;
     }
 
