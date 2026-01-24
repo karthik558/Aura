@@ -103,8 +103,8 @@ function AppLayoutContent() {
       {/* Main Content */}
       <div 
         className={cn(
-          "min-h-screen transition-all duration-200 pb-20 lg:pb-0",
-          sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-60"
+          "min-h-screen transition-all duration-300 pb-20 lg:pb-0",
+          sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-64"
         )}
       >
         <Header stickyHeader={stickyHeader} />

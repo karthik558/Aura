@@ -26,25 +26,39 @@ export function StatCard({
     danger: "text-danger",
   };
 
-  const dotColors = {
-    default: "bg-muted-foreground",
-    primary: "bg-primary",
-    success: "bg-success",
-    warning: "bg-warning",
-    danger: "bg-danger",
+  const bgColors = {
+    default: "bg-muted/50",
+    primary: "bg-primary/10",
+    success: "bg-success/10",
+    warning: "bg-warning/10",
+    danger: "bg-danger/10",
+  };
+
+  const valueColors = {
+    default: "text-foreground",
+    primary: "text-primary",
+    success: "text-success",
+    warning: "text-warning",
+    danger: "text-danger",
   };
 
   return (
-    <div className={cn("stat-card", className)}>
-      <div className="flex items-center justify-between mb-3">
-        <span className={cn("w-2 h-2 rounded-full", dotColors[variant])} />
-        <Icon className={cn("w-4 h-4", iconColors[variant])} />
+    <div className={cn("stat-card group", className)}>
+      <div className="flex items-center justify-between mb-4">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-colors", bgColors[variant])}>
+          <Icon className={cn("w-5 h-5", iconColors[variant])} />
+        </div>
+        {change && (
+          <span className={cn(
+            "text-[10px] font-semibold px-2 py-1 rounded-lg",
+            change.startsWith("+") ? "text-success bg-success/10" : "text-danger bg-danger/10"
+          )}>
+            {change}
+          </span>
+        )}
       </div>
-      <p className="text-2xl font-semibold tracking-tight">{value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{title}</p>
-      {change && (
-        <p className="text-xs text-muted-foreground mt-2">{change}</p>
-      )}
+      <p className={cn("text-2xl font-bold tracking-tight", valueColors[variant])}>{value}</p>
+      <p className="text-xs text-muted-foreground mt-1.5 font-medium">{title}</p>
     </div>
   );
 }

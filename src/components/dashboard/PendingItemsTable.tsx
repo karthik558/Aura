@@ -269,21 +269,24 @@ export function PendingItemsTable() {
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden shadow-soft">
-      <div className="p-5 border-b border-border flex items-center justify-between">
+    <div className="bg-card rounded-2xl border border-border/60 overflow-hidden shadow-sm">
+      <div className="p-5 border-b border-border/60 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Pending Uploads</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Due within 7 days - Awaiting portal submission</p>
+          <h3 className="text-base font-semibold text-foreground">Pending Uploads</h3>
+          <p className="text-xs text-muted-foreground mt-1">Due within 7 days - Awaiting portal submission</p>
         </div>
-        <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+        <span className="text-[10px] font-bold text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-lg">
           {pendingItems.length} items
         </span>
       </div>
 
       {pendingItems.length === 0 ? (
-        <div className="p-8 text-center">
-          <CheckCircle2 className="w-10 h-10 text-success mx-auto mb-3 opacity-50" />
-          <p className="text-sm text-muted-foreground">All permits are uploaded or no urgent items</p>
+        <div className="p-10 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-6 h-6 text-success" />
+          </div>
+          <p className="text-sm font-medium text-foreground">All caught up!</p>
+          <p className="text-xs text-muted-foreground mt-1">No urgent permits awaiting upload</p>
         </div>
       ) : (
         <>
@@ -308,18 +311,18 @@ export function PendingItemsTable() {
                     <td>
                       <div className="flex items-center gap-2">
                         {item.isUrgent && <AlertTriangle className="w-3.5 h-3.5 text-danger" />}
-                        <span className="font-mono text-xs font-semibold text-primary">{item.id}</span>
+                        <span className="font-mono text-xs font-bold text-primary">{item.id}</span>
                       </div>
                     </td>
                     <td className="font-medium text-sm">{item.name}</td>
-                    <td className="text-sm text-muted-foreground">{item.confirmationNumber}</td>
+                    <td className="text-sm text-muted-foreground font-mono">{item.confirmationNumber}</td>
                     <td className="text-muted-foreground text-sm">{item.arrivalDate}</td>
                     <td className="text-sm">{item.property}</td>
                     <td>
                       <span className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+                        "inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold",
                         item.daysUntilDeparture <= 1 ? "bg-danger/10 text-danger" : 
-                        item.daysUntilDeparture <= 3 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"
+                        item.daysUntilDeparture <= 3 ? "bg-warning/10 text-warning" : "bg-muted/60 text-muted-foreground"
                       )}>
                         {item.daysUntilDeparture === 0 ? "Today" : 
                          item.daysUntilDeparture === 1 ? "1 day" : 
@@ -348,13 +351,13 @@ export function PendingItemsTable() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden divide-y divide-border">
+          <div className="md:hidden divide-y divide-border/60">
             {pendingItems.map((item) => (
               <div key={item.id} className={cn("p-4 space-y-3", item.isUrgent && "bg-danger/5")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {item.isUrgent && <AlertTriangle className="w-3.5 h-3.5 text-danger" />}
-                    <span className="font-mono text-xs font-semibold text-primary">{item.id}</span>
+                    <span className="font-mono text-xs font-bold text-primary">{item.id}</span>
                   </div>
                   <span className={cn(
                     item.status === "pending" ? "badge-pending" :
@@ -363,18 +366,18 @@ export function PendingItemsTable() {
                     {item.status}
                   </span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">Confirmation #{item.confirmationNumber}</p>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold">{item.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">Confirmation #{item.confirmationNumber}</p>
                   <p className="text-xs text-muted-foreground">Property: {item.property}</p>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">Arrival: {item.arrivalDate}</span>
                     <span className={cn(
-                      "text-xs font-semibold px-2 py-0.5 rounded-full",
+                      "text-[10px] font-bold px-2 py-0.5 rounded-lg",
                       item.daysUntilDeparture <= 1 ? "bg-danger/10 text-danger" : 
-                      item.daysUntilDeparture <= 3 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"
+                      item.daysUntilDeparture <= 3 ? "bg-warning/10 text-warning" : "bg-muted/60 text-muted-foreground"
                     )}>
                       {item.daysUntilDeparture === 0 ? "Today" : `${item.daysUntilDeparture}d`}
                     </span>

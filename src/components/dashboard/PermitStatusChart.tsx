@@ -123,16 +123,16 @@ export function PermitBarChart() {
     });
   }, [permits]);
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 shadow-soft hover:shadow-medium transition-all duration-300 h-full flex flex-col">
+    <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="text-base font-semibold text-foreground">Weekly Activity</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Status breakdown by day</p>
+          <p className="text-xs text-muted-foreground mt-1">Status breakdown by day</p>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/10 text-success">
           <TrendingUp className="w-3.5 h-3.5" />
-          <span className="text-xs font-semibold">+12.5%</span>
+          <span className="text-[10px] font-bold">+12.5%</span>
         </div>
       </div>
 
@@ -196,8 +196,8 @@ export function PermitBarChart() {
           { label: "Rejected", color: "bg-danger" },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-2">
-            <span className={cn("w-2 h-2 rounded-full", item.color)} />
-            <span className="text-xs text-muted-foreground font-medium">{item.label}</span>
+            <span className={cn("w-2.5 h-2.5 rounded-full", item.color)} />
+            <span className="text-[11px] text-muted-foreground font-medium">{item.label}</span>
           </div>
         ))}
       </div>
@@ -252,12 +252,12 @@ export function PermitPieChart() {
   const total = pieData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 shadow-soft hover:shadow-medium transition-all duration-300 h-full flex flex-col">
+    <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">Status Distribution</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Current breakdown</p>
+          <p className="text-xs text-muted-foreground mt-1">Current breakdown</p>
         </div>
       </div>
 
@@ -291,7 +291,7 @@ export function PermitPieChart() {
         {/* Center text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl font-bold text-foreground">{total}</span>
-          <span className="text-xs text-muted-foreground">Total</span>
+          <span className="text-[10px] text-muted-foreground font-medium">Total</span>
         </div>
       </div>
       
@@ -303,17 +303,17 @@ export function PermitPieChart() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors cursor-default"
+            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-default"
           >
             <div 
-              className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-2 ring-offset-card" 
-              style={{ backgroundColor: item.color, boxShadow: `0 0 8px ${item.color}40` }}
+              className="w-3 h-3 rounded-full flex-shrink-0" 
+              style={{ backgroundColor: item.color }}
             />
             <div className="flex-1 min-w-0">
-              <span className="text-xs text-muted-foreground block truncate">{item.name}</span>
+              <span className="text-[10px] text-muted-foreground block truncate font-medium">{item.name}</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-sm font-bold text-foreground">{item.value}</span>
-                <span className="text-[10px] text-muted-foreground">({item.percentage}%)</span>
+                <span className="text-[9px] text-muted-foreground">({item.percentage}%)</span>
               </div>
             </div>
           </motion.div>
@@ -369,16 +369,16 @@ export function TrendAreaChart() {
   }, [permits]);
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-6 shadow-soft">
+    <div className="bg-card rounded-2xl border border-border/60 p-6 shadow-sm hover:shadow-md transition-all duration-300">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">Permit Trend</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Last 6 weeks</p>
+          <p className="text-xs text-muted-foreground mt-1">Last 6 weeks</p>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-success/10 text-success">
           <TrendingUp className="w-3.5 h-3.5" />
-          <span className="text-xs font-semibold">+24%</span>
+          <span className="text-[10px] font-bold">+24%</span>
         </div>
       </div>
 

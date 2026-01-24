@@ -222,21 +222,30 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <Link
         to={item.path}
         className={cn(
-          "group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+          "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
           isActive 
             ? "bg-primary text-primary-foreground shadow-sm" 
-            : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent",
+            : "text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80",
           collapsed && "justify-center px-2.5"
         )}
       >
+        {isActive && (
+          <motion.div
+            layoutId="activeNav"
+            className="absolute inset-0 bg-primary rounded-xl"
+            transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
+          />
+        )}
         <motion.div
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
           transition={{ delay: index * 0.05 }}
+          className="relative z-10"
         >
           <item.icon className={cn(
-            "w-[18px] h-[18px] flex-shrink-0 transition-transform",
-            !isActive && "group-hover:scale-110"
+            "w-[18px] h-[18px] flex-shrink-0 transition-all duration-200",
+            !isActive && "group-hover:scale-110",
+            isActive && "text-primary-foreground"
           )} />
         </motion.div>
         {!collapsed && (
@@ -244,13 +253,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 + 0.1 }}
-            className="flex-1"
+            className="flex-1 relative z-10"
           >
             {item.label}
           </motion.span>
         )}
         {showTicketBadge && !collapsed && (
-          <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-danger text-danger-foreground text-[11px] font-semibold px-1.5 shadow-sm">
+          <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-lg bg-danger text-danger-foreground text-[10px] font-bold px-1.5 shadow-sm relative z-10">
             {ticketCount}
           </span>
         )}
@@ -261,7 +270,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       return (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-          <TooltipContent side="right" sideOffset={10}>
+          <TooltipContent side="right" sideOffset={12} className="font-medium">
             {item.label}
           </TooltipContent>
         </Tooltip>
@@ -282,25 +291,25 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <aside 
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar-background border-r border-sidebar-border transition-all duration-300 flex flex-col",
-        collapsed ? "w-[68px]" : "w-60"
+        "fixed left-0 top-0 z-40 h-screen bg-sidebar-background border-r border-sidebar-border/60 transition-all duration-300 flex flex-col",
+        collapsed ? "w-[72px]" : "w-64"
       )}
     >
       {/* Header - Logo & Collapse Toggle */}
       <div className={cn(
-        "flex items-center h-14 border-b border-sidebar-border shrink-0",
-        collapsed ? "justify-center px-2" : "px-3 justify-between"
+        "flex items-center h-16 border-b border-sidebar-border/60 shrink-0",
+        collapsed ? "justify-center px-3" : "px-4 justify-between"
       )}>
         <Link 
           to="/"
-          className="flex items-center transition-colors hover:opacity-80"
+          className="flex items-center transition-opacity hover:opacity-80"
         >
           <motion.img 
             src={auraLogo} 
             alt="Aura" 
             className={cn(
               "w-auto logo-accent transition-all duration-300",
-              collapsed ? "h-5" : "h-7"
+              collapsed ? "h-6" : "h-8"
             )}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -312,12 +321,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <TooltipTrigger asChild>
               <button
                 onClick={onToggle}
-                className="p-1.5 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200"
+                className="p-2 rounded-xl text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200"
               >
                 <PanelLeftClose className="w-4 h-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={10}>
+            <TooltipContent side="right" sideOffset={12}>
               Collapse sidebar
             </TooltipContent>
           </Tooltip>
@@ -326,17 +335,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Expand button when collapsed */}
       {collapsed && (
-        <div className="px-2 py-2">
+        <div className="px-3 py-3">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <button
                 onClick={onToggle}
-                className="w-full flex items-center justify-center p-2 rounded-lg text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200"
+                className="w-full flex items-center justify-center p-2.5 rounded-xl text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200"
               >
                 <PanelLeft className="w-4 h-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={10}>
+            <TooltipContent side="right" sideOffset={12}>
               Expand sidebar
             </TooltipContent>
           </Tooltip>
@@ -344,35 +353,45 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       )}
 
       {/* Main Navigation */}
-      <div className="flex-1 overflow-y-auto py-3">
-        <nav className="px-2 space-y-1">
+      <div className="flex-1 overflow-y-auto py-4">
+        {!collapsed && (
+          <p className="px-4 mb-2 text-[10px] font-semibold text-sidebar-muted/70 uppercase tracking-wider">
+            Main Menu
+          </p>
+        )}
+        <nav className="px-3 space-y-1">
           {visibleMainNavItems.map((item, index) => (
             <NavLink key={item.path} item={item} index={index} />
           ))}
         </nav>
 
-        <div className="px-4 py-3">
-          <div className="border-t border-sidebar-border" />
+        <div className="px-4 py-4">
+          <div className="border-t border-sidebar-border/40" />
         </div>
 
-        <nav className="px-2 space-y-1">
+        {!collapsed && (
+          <p className="px-4 mb-2 text-[10px] font-semibold text-sidebar-muted/70 uppercase tracking-wider">
+            System
+          </p>
+        )}
+        <nav className="px-3 space-y-1">
           {visibleSystemNavItems.map((item, index) => (
             <NavLink key={item.path} item={item} index={index + visibleMainNavItems.length} />
           ))}
         </nav>
 
-        <div className="px-4 py-3">
-          <div className="border-t border-sidebar-border" />
+        <div className="px-4 py-4">
+          <div className="border-t border-sidebar-border/40" />
         </div>
 
         {/* Quick Links */}
-        <div className="px-2">
+        <div className="px-3">
           <Popover>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <button className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200",
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200",
                     collapsed && "justify-center px-2.5"
                   )}>
                     <ExternalLink className="w-[18px] h-[18px]" />
@@ -381,7 +400,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </PopoverTrigger>
               </TooltipTrigger>
               {collapsed && (
-                <TooltipContent side="right" sideOffset={10}>
+                <TooltipContent side="right" sideOffset={12}>
                   Quick Links
                 </TooltipContent>
               )}
@@ -389,27 +408,27 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <PopoverContent 
               side="right" 
               align="start"
-              sideOffset={10}
-              className="w-64 p-2"
+              sideOffset={12}
+              className="w-72 p-3"
             >
-              <p className="text-xs font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wide">
+              <p className="text-[10px] font-semibold text-muted-foreground px-2 py-1.5 uppercase tracking-wider">
                 External Links
               </p>
-              <div className="space-y-1">
+              <div className="space-y-1 mt-1">
                 {quickLinks.map((link) => (
                   <a
                     key={link.url}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/60 transition-all duration-200 group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
                       <link.icon className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{link.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{link.description}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{link.description}</p>
                     </div>
                     <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </a>
@@ -421,14 +440,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* Bottom Section */}
-      <div className="px-2 pb-2">
+      <div className="px-3 pb-2">
         {isAdmin && (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Link
                 to="/system-status"
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20 hover:bg-success/15 transition-all duration-200",
+                  "flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-success/10 hover:bg-success/15 transition-all duration-200",
                   collapsed && "justify-center px-2"
                 )}
               >
@@ -442,7 +461,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               </Link>
             </TooltipTrigger>
             {collapsed && (
-              <TooltipContent side="right" sideOffset={10}>
+              <TooltipContent side="right" sideOffset={12}>
                 <p className="font-medium">System Status</p>
                 <p className="text-xs text-muted-foreground">All systems operational</p>
               </TooltipContent>
@@ -450,14 +469,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Tooltip>
         )}
       </div>
-      <div className="p-2 border-t border-sidebar-border space-y-1 shrink-0">
+      <div className="p-3 border-t border-sidebar-border/40 space-y-1.5 shrink-0">
         {/* Notifications */}
         <Popover open={notificationOpen} onOpenChange={setNotificationOpen}>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
                 <button className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200",
                   collapsed && "justify-center px-2.5"
                 )}>
                   <div className="relative">
@@ -468,13 +487,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   </div>
                   {!collapsed && <span>Notifications</span>}
                   {!collapsed && unreadCount > 0 && (
-                    <span className="ml-auto text-xs bg-danger/15 text-danger px-1.5 py-0.5 rounded-full font-semibold">{unreadCount}</span>
+                    <span className="ml-auto text-[10px] bg-danger/15 text-danger px-1.5 py-0.5 rounded-lg font-bold">{unreadCount}</span>
                   )}
                 </button>
               </PopoverTrigger>
             </TooltipTrigger>
             {collapsed && (
-              <TooltipContent side="right" sideOffset={10}>
+              <TooltipContent side="right" sideOffset={12}>
                 Notifications ({unreadCount})
               </TooltipContent>
             )}
@@ -557,7 +576,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <button 
               onClick={toggleTheme}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200",
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200",
                 collapsed && "justify-center px-2.5"
               )}
             >
@@ -576,7 +595,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </button>
           </TooltipTrigger>
           {collapsed && (
-            <TooltipContent side="right" sideOffset={10}>
+            <TooltipContent side="right" sideOffset={12}>
               {theme === "dark" ? "Light Mode" : "Dark Mode"}
             </TooltipContent>
           )}
@@ -584,33 +603,40 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* User Profile */}
         <div className={cn(
-          "flex items-center gap-3 p-2.5 rounded-lg bg-sidebar-accent/50 mt-2 transition-all duration-200",
-          collapsed && "justify-center p-2"
+          "flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-sidebar-accent/60 to-sidebar-accent/30 mt-2 transition-all duration-200",
+          collapsed && "justify-center p-2.5"
         )}>
-          <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-sidebar-border">
-            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-semibold">
+          <Avatar className="w-9 h-9 flex-shrink-0 ring-2 ring-sidebar-border/50">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-xs font-bold">
               {initials || "U"}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-sidebar-foreground">{displayName}</p>
+              <p className="text-sm font-semibold truncate text-sidebar-foreground">{displayName}</p>
               <p className="text-[11px] text-sidebar-muted truncate">{roleLabel}</p>
             </div>
           )}
           {!collapsed && (
-            <button 
-              onClick={handleLogout}
-              className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-muted hover:text-danger transition-all duration-200"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg hover:bg-sidebar-accent text-sidebar-muted hover:text-danger transition-all duration-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                Sign out
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
         {/* Copyright */}
         {!collapsed && (
-          <p className="text-[10px] text-sidebar-muted/60 text-center mt-3 pb-1">
+          <p className="text-[10px] text-sidebar-muted/50 text-center mt-4 pb-1">
             © 2026 Aura. All rights reserved.
           </p>
         )}

@@ -157,79 +157,83 @@ const Index = () => {
       animate="show"
       className="space-y-6"
     >
-      {/* Welcome Card with Stats */}
+      {/* Welcome Header */}
       <motion.div 
         variants={item} 
-        className="bg-card rounded-2xl border border-border overflow-hidden shadow-soft"
+        className="bg-card rounded-2xl border border-border/60 overflow-hidden shadow-sm"
       >
         {/* Greeting Header */}
-        <div className="p-6 pb-5">
-          <p className="text-sm text-muted-foreground font-medium tracking-wide">{formattedDate}</p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mt-2">
+        <div className="p-6 pb-4">
+          <p className="text-xs text-muted-foreground font-medium tracking-wide uppercase">{formattedDate}</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mt-2">
             {greeting}, <span className="text-gradient">{firstName}</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-3">
+          <p className="text-sm text-muted-foreground mt-2 max-w-lg">
             {getRandomMessage()}
           </p>
         </div>
 
         {/* Stats Grid */}
-        <div className="p-4 pt-0 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors group">
+        <div className="p-4 pt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="stat-card-compact">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
                 <FileText className="w-4 h-4 text-primary" />
               </div>
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">
+                +{stats.totalThisWeek}
+              </span>
             </div>
             <p className="text-2xl font-bold tracking-tight">{stats.total}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total Applied</p>
-            <p className="text-xs text-primary font-medium mt-2">+{stats.totalThisWeek} this week</p>
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Total Applied</p>
           </div>
 
-          <div className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors group">
+          <div className="stat-card-compact">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center">
                 <Clock className="w-4 h-4 text-warning" />
               </div>
             </div>
             <p className="text-2xl font-bold tracking-tight text-warning">{stats.pending}</p>
-            <p className="text-xs text-muted-foreground mt-1">Pending Approval</p>
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Pending Approval</p>
           </div>
 
-          <div className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors group">
+          <div className="stat-card-compact">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-danger/10 flex items-center justify-center">
                 <XCircle className="w-4 h-4 text-danger" />
               </div>
             </div>
             <p className="text-2xl font-bold tracking-tight text-danger">{stats.rejected}</p>
-            <p className="text-xs text-muted-foreground mt-1">Rejected</p>
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Rejected</p>
           </div>
 
-          <div className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors group">
+          <div className="stat-card-compact">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-warning" />
+              <div className="w-9 h-9 rounded-xl bg-info/10 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-info" />
               </div>
             </div>
             <p className="text-2xl font-bold tracking-tight">{stats.pendingUpdates}</p>
-            <p className="text-xs text-muted-foreground mt-1">Pending Updates</p>
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Pending Updates</p>
           </div>
 
-          <div className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors group col-span-2 sm:col-span-1">
+          <div className="stat-card-compact col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-success/10 flex items-center justify-center">
                 <CheckCircle2 className="w-4 h-4 text-success" />
               </div>
+              <span className="text-[10px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded-lg">
+                +{stats.uploadedThisWeek}
+              </span>
             </div>
             <p className="text-2xl font-bold tracking-tight text-success">{stats.uploaded}</p>
-            <p className="text-xs text-muted-foreground mt-1">Uploaded</p>
-            <p className="text-xs text-success font-medium mt-2">+{stats.uploadedThisWeek} this week</p>
+            <p className="text-[11px] text-muted-foreground mt-1 font-medium">Uploaded</p>
           </div>
         </div>
       </motion.div>
 
-      {/* Charts */}
+      {/* Charts Section */}
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <PermitBarChart />
@@ -244,41 +248,47 @@ const Index = () => {
         <PendingItemsTable />
       </motion.div>
 
-      {/* Quick Stats */}
+      {/* Performance Metrics */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card rounded-xl border border-border p-5 hover:shadow-soft transition-shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-success" />
+        <div className="bg-card rounded-2xl border border-border/60 p-5 shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-success" />
             </div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Upload Rate</p>
+            <div>
+              <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Upload Rate</p>
+            </div>
           </div>
-          <p className="text-3xl font-bold tracking-tight">{stats.uploadRate.toFixed(1)}%</p>
+          <p className="text-3xl font-bold tracking-tight">{stats.uploadRate.toFixed(1)}<span className="text-lg text-muted-foreground">%</span></p>
           <p className="text-xs text-muted-foreground mt-2">On-time uploads this month</p>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-5 hover:shadow-soft transition-shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
+        <div className="bg-card rounded-2xl border border-border/60 p-5 shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Approval Rate</p>
+            <div>
+              <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Approval Rate</p>
+            </div>
           </div>
-          <p className="text-3xl font-bold tracking-tight">{stats.approvalRate.toFixed(1)}%</p>
+          <p className="text-3xl font-bold tracking-tight">{stats.approvalRate.toFixed(1)}<span className="text-lg text-muted-foreground">%</span></p>
           <p className="text-xs text-muted-foreground mt-2">Permits approved this week</p>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-5 hover:shadow-soft transition-shadow">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-info" />
+        <div className="bg-card rounded-2xl border border-border/60 p-5 shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-info" />
             </div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Avg. Processing</p>
+            <div>
+              <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Avg. Processing</p>
+            </div>
           </div>
           <p className="text-3xl font-bold tracking-tight">
             {stats.avgProcessingDays === null ? "—" : stats.avgProcessingDays}
             {stats.avgProcessingDays !== null && (
-              <span className="text-lg font-medium text-muted-foreground"> days</span>
+              <span className="text-lg text-muted-foreground ml-1">days</span>
             )}
           </p>
           <p className="text-xs text-muted-foreground mt-2">From submission to upload</p>

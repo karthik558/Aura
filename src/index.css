@@ -169,33 +169,50 @@
 @layer components {
   /* Navigation items */
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground transition-all duration-200;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground transition-all duration-200;
   }
   
   .nav-item:hover {
-    @apply bg-accent text-foreground;
+    @apply bg-accent/80 text-foreground;
   }
   
   .nav-item-active {
-    @apply bg-primary text-primary-foreground;
+    @apply bg-primary text-primary-foreground shadow-sm;
   }
 
-  /* Card styles */
+  /* Professional Card Styles */
+  .card-base {
+    @apply bg-card rounded-2xl border border-border/60 transition-all duration-300;
+  }
+
+  .card-elevated {
+    @apply card-base shadow-sm hover:shadow-md hover:border-border;
+  }
+
+  .card-interactive {
+    @apply card-elevated cursor-pointer hover:-translate-y-0.5;
+  }
+
+  /* Stat card styles */
   .stat-card {
-    @apply relative bg-card rounded-xl border border-border p-5 transition-all duration-200 hover:shadow-soft;
+    @apply relative bg-card rounded-2xl border border-border/60 p-5 transition-all duration-300 shadow-sm hover:shadow-md hover:border-border;
   }
 
-  /* Data table */
+  .stat-card-compact {
+    @apply relative bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-4 transition-all duration-200 hover:from-muted/40 hover:to-muted/20 border border-transparent hover:border-border/30;
+  }
+
+  /* Data table - Professional styling */
   .data-table {
     @apply w-full;
   }
   
   .data-table th {
-    @apply text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4 bg-muted/30 first:rounded-tl-lg last:rounded-tr-lg;
+    @apply text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider py-3.5 px-4 bg-muted/40 first:rounded-tl-xl last:rounded-tr-xl;
   }
 
   .data-table.no-uppercase th {
-    @apply normal-case tracking-normal;
+    @apply normal-case tracking-normal text-xs;
   }
 
   .data-table.capitalize th {
@@ -214,21 +231,21 @@
     @apply bg-muted/20;
   }
 
-  /* Status badges */
+  /* Status badges - Refined professional look */
   .badge-pending {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-warning/15 text-warning border border-warning/20;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-warning/10 text-warning;
   }
   
   .badge-approved {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-success/15 text-success border border-success/20;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-success/10 text-success;
   }
   
   .badge-rejected {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-danger/15 text-danger border border-danger/20;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-danger/10 text-danger;
   }
   
   .badge-uploaded {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary border border-primary/20;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary;
   }
 
   /* Logo accent */

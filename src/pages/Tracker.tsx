@@ -857,40 +857,40 @@ const Tracker = () => {
         transition={{ delay: 0.05 }}
         className="grid grid-cols-2 sm:grid-cols-5 gap-3"
       >
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <AlertCircle className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Total</span>
+            <span className="text-xs text-muted-foreground font-medium">Total</span>
           </div>
-          <p className="text-2xl font-semibold">{stats.total}</p>
+          <p className="text-2xl font-bold">{stats.total}</p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4 text-warning" />
-            <span className="text-xs text-muted-foreground">Pending</span>
+            <span className="text-xs text-muted-foreground font-medium">Pending</span>
           </div>
-          <p className="text-2xl font-semibold text-warning">{stats.pending}</p>
+          <p className="text-2xl font-bold text-warning">{stats.pending}</p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 className="w-4 h-4 text-success" />
-            <span className="text-xs text-muted-foreground">Approved</span>
+            <span className="text-xs text-muted-foreground font-medium">Approved</span>
           </div>
-          <p className="text-2xl font-semibold text-success">{stats.approved}</p>
+          <p className="text-2xl font-bold text-success">{stats.approved}</p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <XCircle className="w-4 h-4 text-destructive" />
-            <span className="text-xs text-muted-foreground">Rejected</span>
+            <span className="text-xs text-muted-foreground font-medium">Rejected</span>
           </div>
-          <p className="text-2xl font-semibold text-destructive">{stats.rejected}</p>
+          <p className="text-2xl font-bold text-destructive">{stats.rejected}</p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4 col-span-2 sm:col-span-1">
+        <div className="bg-card rounded-2xl border border-border/60 p-4 col-span-2 sm:col-span-1 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <Upload className="w-4 h-4 text-primary" />
-            <span className="text-xs text-muted-foreground">Uploaded</span>
+            <span className="text-xs text-muted-foreground font-medium">Uploaded</span>
           </div>
-          <p className="text-2xl font-semibold text-primary">{stats.uploaded}</p>
+          <p className="text-2xl font-bold text-primary">{stats.uploaded}</p>
         </div>
       </motion.div>
 
@@ -899,13 +899,13 @@ const Tracker = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card rounded-xl border border-border p-4"
+        className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm"
       >
         <div className="flex flex-col lg:flex-row gap-3">
           {/* Search */}
           <div className="relative flex-1">
             <div className={cn(
-              "relative rounded-xl border border-border/70 bg-background/80 shadow-sm transition focus-within:ring-2 focus-within:ring-primary/20",
+              "relative rounded-xl border border-border/60 bg-background/80 shadow-sm transition focus-within:ring-2 focus-within:ring-primary/20",
               isSearchOpen && "ring-2 ring-primary/20"
             )}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -936,7 +936,7 @@ const Tracker = () => {
             </div>
 
             {isSearchOpen && normalizedSearch && (
-              <div className="absolute z-30 mt-2 w-full rounded-xl border border-border/70 bg-card shadow-lg overflow-hidden">
+              <div className="absolute z-30 mt-2 w-full rounded-2xl border border-border/60 bg-card shadow-lg overflow-hidden">
                 <div className="px-3 py-2 border-b border-border/60 text-xs text-muted-foreground flex items-center gap-2">
                   <Search className="w-3.5 h-3.5" />
                   Search results
@@ -1066,7 +1066,7 @@ const Tracker = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="hidden md:block bg-card rounded-xl border border-border overflow-hidden"
+        className="hidden md:block bg-card rounded-2xl border border-border/60 overflow-hidden shadow-sm"
       >
         <div className="overflow-x-auto">
           <table className="data-table capitalize">
@@ -1325,7 +1325,7 @@ const Tracker = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
-              className="bg-card rounded-xl border border-border p-4 space-y-3 cursor-pointer active:bg-muted/30"
+              className="bg-card rounded-2xl border border-border/60 p-4 space-y-3 cursor-pointer active:bg-muted/30 shadow-sm"
               onClick={() => setDetailViewPermit(permit)}
             >
               <div className="flex items-start justify-between">
@@ -1413,7 +1413,7 @@ const Tracker = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed inset-x-4 bottom-4 md:inset-x-auto md:right-6 md:bottom-6 md:w-96 bg-card rounded-xl border border-border shadow-2xl p-5 z-50"
+          className="fixed inset-x-4 bottom-4 md:inset-x-auto md:right-6 md:bottom-6 md:w-96 bg-card rounded-2xl border border-border/60 shadow-2xl p-5 z-50"
         >
           <div className="flex items-start justify-between mb-4">
             <div>
