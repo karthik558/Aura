@@ -300,57 +300,63 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         "flex items-center h-16 border-b border-sidebar-border/60 shrink-0",
         collapsed ? "justify-center px-3" : "px-4 justify-between"
       )}>
-        <Link 
-          to="/"
-          className="flex items-center transition-opacity hover:opacity-80"
-        >
-          <motion.img 
-            src={auraLogo} 
-            alt="Aura" 
-            className={cn(
-              "w-auto logo-accent transition-all duration-300",
-              collapsed ? "h-6" : "h-8"
-            )}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          />
-        </Link>
-        
-        {!collapsed && (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onToggle}
-                className="p-2 rounded-xl text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200"
+        <AnimatePresence mode="wait">
+          {collapsed ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <motion.button
+                  key="expand-btn"
+                  onClick={onToggle}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-2.5 rounded-xl text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200"
+                >
+                  <PanelLeft className="w-5 h-5" />
+                </motion.button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={12}>
+                Expand sidebar
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <motion.div
+              key="logo-section"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center justify-between w-full"
+            >
+              <Link 
+                to="/"
+                className="flex items-center transition-opacity hover:opacity-80"
               >
-                <PanelLeftClose className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={12}>
-              Collapse sidebar
-            </TooltipContent>
-          </Tooltip>
-        )}
+                <img 
+                  src={auraLogo} 
+                  alt="Aura" 
+                  className="h-8 w-auto logo-accent"
+                />
+              </Link>
+              
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onToggle}
+                    className="p-2 rounded-xl text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200"
+                  >
+                    <PanelLeftClose className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={12}>
+                  Collapse sidebar
+                </TooltipContent>
+              </Tooltip>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-
-      {/* Expand button when collapsed */}
-      {collapsed && (
-        <div className="px-3 py-3">
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onToggle}
-                className="w-full flex items-center justify-center p-2.5 rounded-xl text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent/80 transition-all duration-200"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={12}>
-              Expand sidebar
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      )}
 
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-4">
