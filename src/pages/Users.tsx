@@ -10,7 +10,8 @@ import {
   Edit,
   Trash2,
   Mail,
-  Key
+  Key,
+  Users as UsersIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -588,10 +589,10 @@ const Users = () => {
       {/* Header */}
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">User Management</h2>
-          <p className="text-muted-foreground mt-1">Manage users and their permissions</p>
+          <h1 className="text-xl font-semibold text-foreground">User Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage users, roles, and permissions</p>
         </div>
-        <Button className="gap-2" onClick={() => setIsAddUserOpen(true)}>
+        <Button className="gap-2 rounded-xl" onClick={() => setIsAddUserOpen(true)}>
           <Plus className="w-4 h-4" />
           Add User
         </Button>
@@ -604,26 +605,42 @@ const Users = () => {
         onUserAdded={handleUserAdded}
       />
 
+
+
       <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
         <DialogContent className="sm:max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {userDialogMode === "view" ? "User Profile" : "Edit User"}
-            </DialogTitle>
+          <DialogHeader className="pb-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">
+                  {userDialogMode === "view" ? "User Profile" : "Edit User"}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {userDialogMode === "view" ? "View user details and permissions" : "Update user information"}
+                </p>
+              </div>
+            </div>
           </DialogHeader>
           {activeUser && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <Label>Name</Label>
-                <Input value={activeUser.name} readOnly />
-              </div>
-              <div className="space-y-1">
-                <Label>Email</Label>
-                <Input value={activeUser.email} readOnly />
-              </div>
+            <div className="space-y-5 pt-4">
+              {/* Basic Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label>Role</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Full Name</Label>
+                  <Input value={activeUser.name} readOnly className="h-10 rounded-xl bg-muted/30" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Email Address</Label>
+                  <Input value={activeUser.email} readOnly className="h-10 rounded-xl bg-muted/30" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Role</Label>
                   {userDialogMode === "edit" ? (
                     <Select
                       value={editForm.role}
@@ -631,7 +648,7 @@ const Users = () => {
                         setEditForm((prev) => ({ ...prev, role: value as UserData["role"] }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 rounded-xl">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
@@ -644,40 +661,51 @@ const Users = () => {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Input value={activeUser.role} readOnly />
+                    <Input value={activeUser.role} readOnly className="h-10 rounded-xl bg-muted/30 capitalize" />
                   )}
                 </div>
-                <div className="space-y-1">
-                  <Label>Department</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Department</Label>
                   {userDialogMode === "edit" ? (
                     <Input
                       value={editForm.department}
                       onChange={(e) =>
                         setEditForm((prev) => ({ ...prev, department: e.target.value }))
                       }
+                      className="h-10 rounded-xl"
                     />
                   ) : (
-                    <Input value={activeUser.department} readOnly />
+                    <Input value={activeUser.department} readOnly className="h-10 rounded-xl bg-muted/30" />
                   )}
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+                  <div className="flex items-center gap-3 h-10 px-3 rounded-xl border border-border bg-card">
+                    <Switch
+                      checked={editForm.status === "active"}
+                      onCheckedChange={(checked) =>
+                        userDialogMode === "edit" &&
+                        setEditForm((prev) => ({ ...prev, status: checked ? "active" : "inactive" }))
+                      }
+                      disabled={userDialogMode === "view"}
+                    />
+                    <span className={cn(
+                      "text-sm font-medium",
+                      editForm.status === "active" ? "text-success" : "text-muted-foreground"
+                    )}>
+                      {editForm.status === "active" ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <Label>Status</Label>
-                <Switch
-                  checked={editForm.status === "active"}
-                  onCheckedChange={(checked) =>
-                    userDialogMode === "edit" &&
-                    setEditForm((prev) => ({ ...prev, status: checked ? "active" : "inactive" }))
-                  }
-                />
-              </div>
+
               {userDialogMode === "edit" && (
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setIsUserDialogOpen(false)} className="rounded-xl">
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveUser} disabled={isSavingPermissions}>
-                    {isSavingPermissions ? "Saving..." : "Save"}
+                  <Button onClick={handleSaveUser} disabled={isSavingPermissions} className="rounded-xl">
+                    {isSavingPermissions ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               )}
@@ -685,11 +713,16 @@ const Users = () => {
               {userDialogMode === "edit" && isAdmin && (
                 <>
                   <Separator />
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium">Permissions</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-warning/10 flex items-center justify-center">
+                        <Shield className="w-3.5 h-3.5 text-warning" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Permissions</span>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {Object.entries(permissions).map(([key, value]) => (
-                        <label key={key} className="flex items-center gap-2 rounded-lg border p-3">
+                        <label key={key} className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer">
                           <Checkbox
                             checked={value}
                             onCheckedChange={(checked) =>
@@ -704,9 +737,14 @@ const Users = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium">Page Access</p>
-                    <div className="border rounded-lg overflow-hidden">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-info/10 flex items-center justify-center">
+                        <Eye className="w-3.5 h-3.5 text-info" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">Page Access</span>
+                    </div>
+                    <div className="border border-border rounded-2xl overflow-hidden">
                       <div className="overflow-x-auto">
                         <div className="min-w-[520px]">
                           <div className="grid grid-cols-5 gap-2 p-3 bg-muted/50 text-xs font-medium">
@@ -736,8 +774,8 @@ const Users = () => {
                             };
 
                             return (
-                              <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t items-center">
-                                <div className="text-sm">{page.name}</div>
+                              <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t border-border items-center">
+                                <div className="text-sm font-medium">{page.name}</div>
                                 <div className="flex justify-center">
                                   <Checkbox
                                     checked={access.canView}
@@ -781,24 +819,32 @@ const Users = () => {
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
+          <DialogHeader className="pb-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Delete User</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">This action cannot be undone</p>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 pt-4">
             <p className="text-sm text-muted-foreground">
               This will delete the user's profile, settings, permissions and page access records.
               It will not delete the Auth user (requires server/service role).
             </p>
-            <div className="rounded-lg border p-3">
-              <p className="text-sm font-medium">{activeUser?.name}</p>
-              <p className="text-xs text-muted-foreground">{activeUser?.email}</p>
+            <div className="rounded-xl border border-border p-4 bg-muted/30">
+              <p className="text-sm font-semibold text-foreground">{activeUser?.name}</p>
+              <p className="text-xs text-muted-foreground mt-1">{activeUser?.email}</p>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="rounded-xl">
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteUser}>
-                Delete
+              <Button variant="destructive" onClick={handleDeleteUser} className="rounded-xl">
+                Delete User
               </Button>
             </div>
           </div>
@@ -807,73 +853,77 @@ const Users = () => {
 
       <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
+          <DialogHeader className="pb-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
+                <Key className="w-5 h-5 text-warning" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Reset Password</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">Set a new password for {activeUser?.name}</p>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="newPassword">New Password</Label>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword" className="text-xs font-medium text-muted-foreground">New Password</Label>
               <Input
                 id="newPassword"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="At least 8 characters"
+                className="h-10 rounded-xl"
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="confirmNewPassword">Confirm Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="confirmNewPassword" className="text-xs font-medium text-muted-foreground">Confirm Password</Label>
               <Input
                 id="confirmNewPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+                className="h-10 rounded-xl"
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Passwords are stored as a one-way hash in the users table (and your own Auth password is updated when you change your password).
+              Passwords are stored as a one-way hash in the users table.
             </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsResetDialogOpen(false)} className="rounded-xl">
                 Cancel
               </Button>
-              <Button onClick={handleResetPassword}>Update Password</Button>
+              <Button onClick={handleResetPassword} className="rounded-xl">Update Password</Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Role Stats */}
-      <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {Object.entries(roleConfig).map(([role, config]) => {
-          const count = users.filter(u => u.role === role).length;
-          return (
-            <div key={role} className="bg-card rounded-xl border border-border p-4">
-              <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-3", config.className)}>
-                <config.icon className="w-5 h-5" />
-              </div>
-              <p className="text-2xl font-bold">{count}</p>
-              <p className="text-xs font-medium text-muted-foreground">{config.label}s</p>
+      {/* Users Table */}
+      <motion.div variants={item} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+        {/* Table Header with Search */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <UsersIcon className="w-4 h-4 text-primary" />
             </div>
-          );
-        })}
-      </motion.div>
-
-      {/* Search */}
-      <motion.div variants={item} className="bg-card rounded-xl border border-border p-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">All Users</h3>
+              <p className="text-xs text-muted-foreground">{filteredUsers.length} users found</p>
+            </div>
+          </div>
+          <div className="relative max-w-sm w-full sm:w-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10 rounded-xl border-border"
+            />
+          </div>
         </div>
-      </motion.div>
 
-      {/* Desktop Table */}
-      <motion.div variants={item} className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
@@ -887,78 +937,97 @@ const Users = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => {
-                const config = roleConfig[user.role] ?? defaultRoleConfig;
-                const RoleIcon = config.icon;
-                return (
-                  <tr key={user.id}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-9 h-9">
-                          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs font-medium">
-                            {user.avatar}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">{user.name}</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center">
+                        <UsersIcon className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">No users found</p>
+                        <p className="text-xs text-muted-foreground mt-1">Try adjusting your search query</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => {
+                  const config = roleConfig[user.role] ?? defaultRoleConfig;
+                  const RoleIcon = config.icon;
+                  return (
+                    <tr key={user.id} className="group">
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-9 h-9 ring-2 ring-border">
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xs font-medium">
+                              {user.avatar}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-sm text-foreground">{user.name}</p>
+                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <Badge className={cn("gap-1 text-xs", config.className)}>
-                        <RoleIcon className="w-3 h-3" />
-                        {config.label}
-                      </Badge>
-                    </td>
-                    <td className="text-muted-foreground text-sm">{user.department}</td>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={user.status === "active"} />
-                        <span className={cn(
-                          "text-xs font-medium",
-                          user.status === "active" ? "text-success" : "text-muted-foreground"
-                        )}>
-                          {user.status === "active" ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="text-xs text-muted-foreground">{user.lastLogin}</td>
-                    <td>
-                      <div className="flex items-center justify-end">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => openUserDialog(user, "view")} className="flex items-center gap-2 cursor-pointer">
-                              <Eye className="w-4 h-4" /> View Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => openUserDialog(user, "edit")} className="flex items-center gap-2 cursor-pointer">
-                              <Edit className="w-4 h-4" /> Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => openResetPassword(user)} className="flex items-center gap-2 cursor-pointer">
-                              <Key className="w-4 h-4" /> Reset Password
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => toast.info("Send email is not wired yet")} className="flex items-center gap-2 cursor-pointer">
-                              <Mail className="w-4 h-4" /> Send Email
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-danger focus:text-danger focus:bg-danger/10 cursor-pointer"
-                              onSelect={() => openDeleteDialog(user)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td>
+                        <Badge className={cn("gap-1.5 text-xs font-medium rounded-lg", config.className)}>
+                          <RoleIcon className="w-3 h-3" />
+                          {config.label}
+                        </Badge>
+                      </td>
+                      <td className="text-muted-foreground text-sm">{user.department}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            user.status === "active" ? "bg-success" : "bg-muted-foreground"
+                          )} />
+                          <span className={cn(
+                            "text-xs font-medium",
+                            user.status === "active" ? "text-success" : "text-muted-foreground"
+                          )}>
+                            {user.status === "active" ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="text-xs text-muted-foreground">{user.lastLogin}</td>
+                      <td>
+                        <div className="flex items-center justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onSelect={() => openUserDialog(user, "view")} className="flex items-center gap-2 cursor-pointer">
+                                <Eye className="w-4 h-4 text-muted-foreground" /> View Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openUserDialog(user, "edit")} className="flex items-center gap-2 cursor-pointer">
+                                <Edit className="w-4 h-4 text-muted-foreground" /> Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openResetPassword(user)} className="flex items-center gap-2 cursor-pointer">
+                                <Key className="w-4 h-4 text-muted-foreground" /> Reset Password
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => toast.info("Send email is not wired yet")} className="flex items-center gap-2 cursor-pointer">
+                                <Mail className="w-4 h-4 text-muted-foreground" /> Send Email
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-danger focus:text-danger focus:bg-danger/10 cursor-pointer flex items-center gap-2"
+                                onSelect={() => openDeleteDialog(user)}
+                              >
+                                <Trash2 className="w-4 h-4" /> Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

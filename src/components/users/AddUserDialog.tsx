@@ -656,129 +656,146 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className="p-2 bg-primary/10 rounded-lg">
+        <DialogHeader className="pb-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <User className="w-5 h-5 text-primary" />
             </div>
-            Add New User
-          </DialogTitle>
+            <div>
+              <DialogTitle className="text-lg">Add New User</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">Create a new user account with permissions</p>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center gap-2">
-                <User className="w-4 h-4 text-muted-foreground" />
-                Full Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="name"
-                placeholder="Enter full name"
-                value={formData.name}
-                onChange={(e) => updateFormData("name", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                Email Address <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter email address"
-                value={formData.email}
-                onChange={(e) => updateFormData("email", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Create the Auth user in Supabase Auth first. This form creates the profile and permissions.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="department" className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-muted-foreground" />
-                Department <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.department}
-                onValueChange={(value) => updateFormData("department", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-muted-foreground" />
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Set a temporary password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-muted-foreground" />
-                Confirm Password
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Re-enter password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave blank if the Auth user already exists.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
+        <div className="space-y-6 pt-4">
+          {/* Basic Information Section */}
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Role</span>
+              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                <User className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Basic Information</span>
             </div>
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">
+                  Full Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Enter full name"
+                  value={formData.name}
+                  onChange={(e) => updateFormData("name", e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter email address"
+                  value={formData.email}
+                  onChange={(e) => updateFormData("email", e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="department" className="text-xs font-medium text-muted-foreground">
+                  Department <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.department}
+                  onValueChange={(value) => updateFormData("department", value)}
+                >
+                  <SelectTrigger className="h-10 rounded-xl">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Password Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-warning/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-warning" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Password</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">
+                  Password <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground">
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Role Selection */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-info/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-info" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Role</span>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3">
               {roles.map((role) => (
                 <button
                   key={role.value}
                   type="button"
                   onClick={() => applyRolePresets(role.value)}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
                     formData.role === role.value
                       ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      : "border-border hover:border-primary/50 hover:bg-muted/30"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{role.label}</p>
-                      <p className="text-sm text-muted-foreground">{role.description}</p>
+                      <p className="font-medium text-sm text-foreground">{role.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
                     </div>
                     <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                         formData.role === role.value
                           ? "border-primary bg-primary"
-                          : "border-muted-foreground"
+                          : "border-muted-foreground/30"
                       }`}
                     >
                       {formData.role === role.value && (
@@ -790,16 +807,19 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Role presets automatically select the default page access and permissions.
+              Role presets automatically configure default page access and permissions.
             </p>
           </div>
 
-          <div className="space-y-2">
+          {/* Page Access */}
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Page Access</span>
+              <div className="w-6 h-6 rounded-lg bg-success/10 flex items-center justify-center">
+                <FileText className="w-3.5 h-3.5 text-success" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Page Access</span>
             </div>
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border border-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <div className="min-w-[520px]">
                   <div className="grid grid-cols-5 gap-2 p-3 bg-muted/50 text-xs font-medium">
@@ -821,9 +841,11 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
                     const access = formData.pageAccess.find((p) => p.page === page.id)!;
                     const Icon = page.icon;
                     return (
-                      <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t items-center">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Icon className="w-4 h-4 text-muted-foreground" />
+                      <div key={page.id} className="grid grid-cols-5 gap-2 p-3 border-t border-border items-center">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <div className="w-6 h-6 rounded-lg bg-muted/50 flex items-center justify-center">
+                            <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          </div>
                           {page.name}
                         </div>
                         <div className="flex justify-center">
@@ -866,16 +888,17 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
             </div>
           </div>
 
-          <Separator />
-
-          <div className="space-y-2">
+          {/* Additional Permissions */}
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Additional Permissions</span>
+              <div className="w-6 h-6 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-purple-500" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Additional Permissions</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {Object.entries(formData.permissions).map(([key, value]) => (
-                <label key={key} className="flex items-center gap-2 rounded-lg border p-3">
+                <label key={key} className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer">
                   <Checkbox
                     checked={value}
                     onCheckedChange={(checked) => updatePermission(key as keyof Permissions, !!checked)}
@@ -888,17 +911,30 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
             </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="text-xs text-muted-foreground">
-              Total active permissions: <strong>{getActivePermissionsCount()}</strong>
+          {/* Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-border">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="w-5 h-5 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Check className="w-3 h-3 text-primary" />
+              </div>
+              <span>Total active permissions: <strong className="text-foreground">{getActivePermissionsCount()}</strong></span>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none">
+              <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1 sm:flex-none rounded-xl">
                 Cancel
               </Button>
-              <Button className="gap-2 flex-1 sm:flex-none" onClick={handleSubmit} disabled={isSubmitting}>
-                <Check className="w-4 h-4" />
-                {isSubmitting ? "Creating..." : "Create User"}
+              <Button className="gap-2 flex-1 sm:flex-none rounded-xl" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Create User
+                  </>
+                )}
               </Button>
             </div>
           </div>
