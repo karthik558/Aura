@@ -919,50 +919,50 @@ const Tracker = () => {
         transition={{ delay: 0.05 }}
         className="grid grid-cols-2 sm:grid-cols-5 gap-3"
       >
-        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-muted/60 flex items-center justify-center">
-              <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
+        <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <AlertCircle className="w-5 h-5 text-muted-foreground" />
             </div>
           </div>
-          <p className="text-2xl font-bold mt-2">{stats.total}</p>
-          <span className="text-xs text-muted-foreground font-medium">Total Permits</span>
+          <p className="text-2xl font-bold tracking-tight">{stats.total}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium">Total Permits</p>
         </div>
-        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5 text-warning" />
+        <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Clock className="w-5 h-5 text-warning" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-warning mt-2">{stats.pending}</p>
-          <span className="text-xs text-muted-foreground font-medium">Pending</span>
+          <p className="text-2xl font-bold tracking-tight text-warning">{stats.pending}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium">Pending</p>
         </div>
-        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
-              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+        <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <CheckCircle2 className="w-5 h-5 text-success" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-success mt-2">{stats.approved}</p>
-          <span className="text-xs text-muted-foreground font-medium">Approved</span>
+          <p className="text-2xl font-bold tracking-tight text-success">{stats.approved}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium">Approved</p>
         </div>
-        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center">
-              <XCircle className="w-3.5 h-3.5 text-destructive" />
+        <div className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <XCircle className="w-5 h-5 text-destructive" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-destructive mt-2">{stats.rejected}</p>
-          <span className="text-xs text-muted-foreground font-medium">Rejected</span>
+          <p className="text-2xl font-bold tracking-tight text-destructive">{stats.rejected}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium">Rejected</p>
         </div>
-        <div className="bg-card rounded-2xl border border-border p-4 col-span-2 sm:col-span-1 shadow-sm hover:shadow-md transition-all duration-200">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Upload className="w-3.5 h-3.5 text-primary" />
+        <div className="relative bg-card rounded-xl border border-border p-4 col-span-2 sm:col-span-1 shadow-sm hover:shadow-md transition-all duration-200 group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Upload className="w-5 h-5 text-primary" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-primary mt-2">{stats.uploaded}</p>
-          <span className="text-xs text-muted-foreground font-medium">Uploaded</span>
+          <p className="text-2xl font-bold tracking-tight text-primary">{stats.uploaded}</p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium">Uploaded</p>
         </div>
       </motion.div>
 

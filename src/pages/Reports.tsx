@@ -652,24 +652,24 @@ const Reports = () => {
       </motion.div>
 
       {/* Quick Report Types */}
-      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {reportTypes.map((report) => (
           <div 
             key={report.title} 
-            className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md group"
+            className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group"
           >
-            <div className="flex items-start justify-between">
-              <div className={`w-11 h-11 rounded-xl ${report.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`w-10 h-10 rounded-xl ${report.color} flex items-center justify-center group-hover:scale-105 transition-transform`}>
                 <report.icon className="w-5 h-5" />
               </div>
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Ready</span>
+              <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-full uppercase tracking-wider">Ready</span>
             </div>
-            <h3 className="font-semibold text-foreground mb-1">{report.title}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{report.description}</p>
+            <h3 className="text-sm font-semibold text-foreground mb-1">{report.title}</h3>
+            <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2">{report.description}</p>
             <Button
               variant="ghost"
               size="sm"
-              className="gap-2 -ml-2 text-primary hover:text-primary"
+              className="gap-2 -ml-2 h-8 text-primary hover:text-primary"
               onClick={() => openExportDialog(report.id)}
             >
               <Download className="w-4 h-4" />

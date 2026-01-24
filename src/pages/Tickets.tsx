@@ -644,21 +644,21 @@ const Tickets = () => {
         </motion.div>
 
         {/* Stats */}
-        <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Open", value: tickets.filter(t => t.status === "open").length, icon: AlertCircle, color: "text-warning", bg: "bg-warning/10" },
+            { label: "Open Tickets", value: tickets.filter(t => t.status === "open").length, icon: AlertCircle, color: "text-warning", bg: "bg-warning/10" },
             { label: "In Progress", value: tickets.filter(t => t.status === "in_progress").length, icon: Clock, color: "text-primary", bg: "bg-primary/10" },
             { label: "Resolved", value: tickets.filter(t => t.status === "resolved").length, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
             { label: "Critical", value: tickets.filter(t => t.priority === "critical").length, icon: AlertCircle, color: "text-danger", bg: "bg-danger/10" },
           ].map((stat) => (
-            <div key={stat.label} className="bg-card rounded-xl border border-border p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={cn("p-1.5 rounded-md", stat.bg)}>
-                  <stat.icon className={cn("w-3.5 h-3.5", stat.color)} />
+            <div key={stat.label} className="relative bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
+              <div className="flex items-center justify-between mb-3">
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform", stat.bg)}>
+                  <stat.icon className={cn("w-5 h-5", stat.color)} />
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
               </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
+              <p className={cn("text-2xl font-bold tracking-tight", stat.color)}>{stat.value}</p>
+              <p className="text-[11px] text-muted-foreground mt-1 font-medium">{stat.label}</p>
             </div>
           ))}
         </motion.div>
