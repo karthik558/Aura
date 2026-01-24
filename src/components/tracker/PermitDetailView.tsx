@@ -241,29 +241,39 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-background/90 backdrop-blur border-b border-border/60 mb-4 flex items-center justify-between"
+          className="sticky top-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 bg-background/90 backdrop-blur border-b border-border mb-6 flex items-center justify-between"
         >
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" onClick={onClose} className="h-10 w-10 rounded-xl border-border">
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold text-foreground">{editedPermit.id}</h1>
-                <CopyButton value={editedPermit.id} field="id" />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/50 border border-border">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <h1 className="text-base font-semibold text-foreground">{editedPermit.id}</h1>
+                  <CopyButton value={editedPermit.id} field="id" />
+                </div>
+                <div className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold",
+                  statusConfig[editedPermit.status].className
+                )}>
+                  <StatusIcon className="w-3.5 h-3.5" />
+                  {statusConfig[editedPermit.status].label}
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">Permit Details</p>
+              <p className="text-sm text-muted-foreground mt-1">Permit Details • {editedPermit.name}</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" size="sm" onClick={handleCancel} className="gap-2">
+                <Button variant="outline" size="sm" onClick={handleCancel} className="gap-2 rounded-xl">
                   <X className="w-4 h-4" />
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleSave} className="gap-2">
+                <Button size="sm" onClick={handleSave} className="gap-2 rounded-xl">
                   <Save className="w-4 h-4" />
                   Save Changes
                 </Button>
@@ -280,7 +290,7 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                   }
                   setIsEditing(true);
                 }}
-                className="gap-2"
+                className="gap-2 rounded-xl"
               >
                 <Edit className="w-4 h-4" />
                 Edit
@@ -298,78 +308,90 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             className="lg:col-span-2 space-y-6"
           >
             {/* Status Card */}
-            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-medium text-foreground flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Status
-                </h2>
-                <div className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium",
-                  statusConfig[editedPermit.status].className
-                )}>
-                  <StatusIcon className="w-4 h-4" />
-                  {statusConfig[editedPermit.status].label}
+            {isEditing && (
+              <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-primary" />
+                  </div>
+                  <h2 className="font-semibold text-foreground">Change Status</h2>
                 </div>
+                
+                <Select
+                  value={editedPermit.status}
+                  onValueChange={(value: Permit["status"]) => 
+                    setEditedPermit({ ...editedPermit, status: value })
+                  }
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">
+                      <span className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-warning" />
+                        Pending
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="approved">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                        Approved
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="rejected">
+                      <span className="flex items-center gap-2">
+                        <XCircle className="w-3.5 h-3.5 text-destructive" />
+                        Rejected
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="uploaded">
+                      <span className="flex items-center gap-2">
+                        <Upload className="w-3.5 h-3.5 text-primary" />
+                        Uploaded
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              {isEditing && (
-                <div className="space-y-2">
-                  <Label className="text-xs">Change Status</Label>
-                  <Select
-                    value={editedPermit.status}
-                    onValueChange={(value: Permit["status"]) => 
-                      setEditedPermit({ ...editedPermit, status: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="uploaded">Uploaded</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Guest Information */}
-            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-              <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
-                <User className="w-4 h-4" />
-                Guest Information
-              </h2>
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-8 h-8 rounded-xl bg-info/10 flex items-center justify-center">
+                  <User className="w-4 h-4 text-info" />
+                </div>
+                <h2 className="font-semibold text-foreground">Guest Information</h2>
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Full Name</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Full Name</Label>
                   {isEditing ? (
                     <Input
                       value={editedPermit.name}
                       onChange={(e) => setEditedPermit({ ...editedPermit, name: e.target.value })}
-                      className="h-9"
+                      className="h-10 rounded-xl"
                     />
                   ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
                       <span className="text-sm font-medium">{editedPermit.name}</span>
                       <CopyButton value={editedPermit.name} field="name" />
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Confirmation Number</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Confirmation Number</Label>
                   {isEditing ? (
                     <Input
                       value={editedPermit.confirmationNumber}
                       onChange={(e) => setEditedPermit({ ...editedPermit, confirmationNumber: e.target.value })}
-                      className="h-9"
+                      className="h-10 rounded-xl"
                     />
                   ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
                       <span className="text-sm font-medium flex items-center gap-2">
                         <FileText className="w-3.5 h-3.5 text-muted-foreground" />
                         {editedPermit.confirmationNumber}
@@ -379,8 +401,8 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Adults</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Adults</Label>
                   {isEditing ? (
                     <Input
                       type="number"
@@ -392,26 +414,29 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                           adults: Math.max(1, Number(e.target.value) || 1),
                         })
                       }
-                      className="h-9"
+                      className="h-10 rounded-xl"
                     />
                   ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
-                      <span className="text-sm font-medium">{editedPermit.adults}</span>
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                        {editedPermit.adults} {editedPermit.adults === 1 ? 'Adult' : 'Adults'}
+                      </span>
                       <CopyButton value={String(editedPermit.adults)} field="adults" />
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Property</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Property</Label>
                   {isEditing ? (
                     <Input
                       value={editedPermit.property}
                       onChange={(e) => setEditedPermit({ ...editedPermit, property: e.target.value })}
-                      className="h-9"
+                      className="h-10 rounded-xl"
                     />
                   ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
                       <span className="text-sm font-medium flex items-center gap-2">
                         <Globe className="w-3.5 h-3.5 text-muted-foreground" />
                         {editedPermit.property}
@@ -424,19 +449,21 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             </div>
 
             {/* Travel Dates */}
-            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-              <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
-                <Plane className="w-4 h-4" />
-                Travel Dates
-              </h2>
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-8 h-8 rounded-xl bg-success/10 flex items-center justify-center">
+                  <Plane className="w-4 h-4 text-success" />
+                </div>
+                <h2 className="font-semibold text-foreground">Travel Dates</h2>
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Arrival Date</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Arrival Date</Label>
                   {isEditing ? (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start h-9 font-normal">
+                        <Button variant="outline" className="w-full justify-start h-10 font-normal rounded-xl">
                           <Calendar className="w-4 h-4 mr-2" />
                           {arrivalDate ? format(arrivalDate, "PPP") : "Select date"}
                         </Button>
@@ -452,9 +479,9 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
                       <span className="text-sm font-medium flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Calendar className="w-3.5 h-3.5 text-success" />
                         {editedPermit.arrivalDate}
                       </span>
                       <CopyButton value={editedPermit.arrivalDate} field="arrivalDate" />
@@ -462,12 +489,12 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Departure Date</Label>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Departure Date</Label>
                   {isEditing ? (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start h-9 font-normal">
+                        <Button variant="outline" className="w-full justify-start h-10 font-normal rounded-xl">
                           <Calendar className="w-4 h-4 mr-2" />
                           {departureDate ? format(departureDate, "PPP") : "Select date"}
                         </Button>
@@ -483,9 +510,9 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <div className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
                       <span className="text-sm font-medium flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Calendar className="w-3.5 h-3.5 text-destructive" />
                         {editedPermit.departureDate}
                       </span>
                       <CopyButton value={editedPermit.departureDate} field="departureDate" />
@@ -497,11 +524,16 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
 
             {/* Notes Section */}
             {isEditing && (
-              <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-                <h2 className="font-medium text-foreground mb-4">Additional Notes</h2>
+              <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <h2 className="font-semibold text-foreground">Additional Notes</h2>
+                </div>
                 <Textarea
                   placeholder="Add any additional notes about this permit..."
-                  className="min-h-[100px] resize-none"
+                  className="min-h-[100px] resize-none rounded-xl"
                 />
               </div>
             )}
@@ -515,57 +547,67 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             className="space-y-6"
           >
             {/* Quick Actions */}
-            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-              <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
-                Quick Actions
-              </h2>
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-warning/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-warning" />
+                </div>
+                <h2 className="font-semibold text-foreground">Quick Actions</h2>
+              </div>
               <div className="space-y-2">
                 <Button
                   variant="outline"
-                  className="w-full justify-start gap-2"
-                  size="sm"
+                  className="w-full justify-start gap-3 h-11 rounded-xl border-border hover:bg-primary/5 hover:border-primary/30 transition-all"
                   onClick={handleMarkUploaded}
                 >
-                  <Upload className="w-4 h-4" />
-                  Mark as Uploaded
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Upload className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium">Mark as Uploaded</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start gap-2"
-                  size="sm"
+                  className="w-full justify-start gap-3 h-11 rounded-xl border-border hover:bg-muted/60 transition-all"
                   onClick={handleCopyAllDetails}
                 >
-                  <Copy className="w-4 h-4" />
-                  Copy All Details
+                  <div className="w-7 h-7 rounded-lg bg-muted/60 flex items-center justify-center">
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                  <span className="text-sm font-medium">Copy All Details</span>
                 </Button>
               </div>
             </div>
 
             {/* Tracking History */}
-            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-              <h2 className="font-medium text-foreground flex items-center gap-2 mb-4">
-                <History className="w-4 h-4" />
-                Tracking History
-              </h2>
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-info/10 flex items-center justify-center">
+                  <History className="w-4 h-4 text-info" />
+                </div>
+                <h2 className="font-semibold text-foreground">Tracking History</h2>
+              </div>
               
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+              <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
                 {history.map((entry, index) => (
-                  <div key={index} className="flex gap-3">
+                  <div key={index} className="flex gap-3 group">
                     <div className="flex flex-col items-center">
                       <div className={cn(
-                        "w-2.5 h-2.5 rounded-full mt-1",
+                        "w-3 h-3 rounded-full mt-1.5 ring-4 ring-card",
                         index === 0 ? "bg-primary" : "bg-muted-foreground/30"
                       )} />
                       {index < history.length - 1 && (
-                        <div className="w-px flex-1 bg-border mt-1" />
+                        <div className="w-px flex-1 bg-border/60 mt-1" />
                       )}
                     </div>
-                    <div className="pb-4">
-                      <p className="text-sm font-medium leading-tight">{entry.action}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {entry.date}
-                      </p>
-                      <p className="text-xs text-muted-foreground">by {entry.by}</p>
+                    <div className="pb-4 flex-1">
+                      <div className="p-2.5 rounded-xl bg-muted/30 border border-transparent group-hover:border-border/50 transition-colors">
+                        <p className="text-sm font-medium leading-tight text-foreground">{entry.action}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[11px] text-muted-foreground">{entry.date}</span>
+                          <span className="text-[11px] text-muted-foreground/50">•</span>
+                          <span className="text-[11px] text-muted-foreground">{entry.by}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -573,13 +615,33 @@ export function PermitDetailView({ permit, onClose, onSave }: PermitDetailViewPr
             </div>
 
             {/* Meta Info */}
-            <div className="bg-card/80 rounded-2xl border border-border/60 p-5 shadow-sm">
-              <h2 className="font-medium text-foreground mb-4">Last Updated</h2>
-              <div className="text-sm">
-                <p className="text-muted-foreground">{lastEntry?.date ?? editedPermit.lastUpdated}</p>
-                <p className="text-muted-foreground">by {lastEntry?.by ?? editedPermit.updatedBy}</p>
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-muted/60 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <h2 className="font-semibold text-foreground">Last Updated</h2>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Date & Time</p>
+                    <p className="text-sm font-medium text-foreground mt-0.5">{lastEntry?.date ?? editedPermit.lastUpdated}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Updated By</p>
+                    <p className="text-sm font-medium text-foreground mt-0.5">{lastEntry?.by ?? editedPermit.updatedBy}</p>
+                  </div>
+                </div>
                 {createdEntry && (
-                  <p className="text-muted-foreground">Added by {createdEntry.by}</p>
+                  <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/50">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Created By</p>
+                      <p className="text-sm font-medium text-foreground mt-0.5">{createdEntry.by}</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

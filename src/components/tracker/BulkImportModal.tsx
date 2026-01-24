@@ -365,14 +365,19 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5 text-primary" />
-            Bulk Import Permits
-          </DialogTitle>
+        <DialogHeader className="pb-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Upload className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg">Bulk Import Permits</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">Import multiple permits at once</p>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-5 pt-4">
           {/* File Drop Zone */}
           {status === "idle" && (
             <div
@@ -381,10 +386,10 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
               onDragOver={handleDrag}
               onDrop={handleDrop}
               className={cn(
-                "border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer",
+                "border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer",
                 dragActive 
                   ? "border-primary bg-primary/5" 
-                  : "border-border hover:border-primary/50 hover:bg-muted/50",
+                  : "border-border hover:border-primary/50 hover:bg-muted/30",
                 selectedFile && "border-primary bg-primary/5"
               )}
               onClick={() => fileInputRef.current?.click()}
@@ -397,27 +402,35 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
                 className="hidden"
               />
               
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-4">
                 <div className={cn(
-                  "p-3 rounded-full",
-                  selectedFile ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                  "w-16 h-16 rounded-2xl flex items-center justify-center transition-all",
+                  selectedFile ? "bg-primary/10" : "bg-muted/60"
                 )}>
-                  {getFileIcon()}
+                  <div className={cn(
+                    "transition-colors",
+                    selectedFile ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {getFileIcon()}
+                  </div>
                 </div>
                 
                 {selectedFile ? (
-                  <div>
-                    <p className="font-medium text-foreground">{selectedFile.name}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-success" />
+                      <p className="font-semibold text-foreground">{selectedFile.name}</p>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      {(selectedFile.size / 1024).toFixed(1)} KB
+                      {(selectedFile.size / 1024).toFixed(1)} KB • Ready to import
                     </p>
                   </div>
                 ) : (
-                  <div>
-                    <p className="font-medium text-foreground">
+                  <div className="space-y-2">
+                    <p className="font-semibold text-foreground">
                       Drop your file here or click to browse
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground">
                       Supports Excel (.xlsx, .xls), CSV, and XML
                     </p>
                   </div>
@@ -428,43 +441,59 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
 
           {/* Progress State */}
           {(status === "uploading" || status === "processing") && (
-            <div className="py-8 space-y-4">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                <p className="font-medium">
-                  {status === "uploading" ? "Uploading file..." : "Processing data..."}
+            <div className="py-10 space-y-5">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-lg">
+                    {status === "uploading" ? "Uploading file..." : "Processing data..."}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Please wait while we process your file
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Progress value={progress} className="h-2 rounded-full" />
+                <p className="text-sm text-center text-muted-foreground font-medium">
+                  {progress}% complete
                 </p>
               </div>
-              <Progress value={progress} className="h-2" />
-              <p className="text-sm text-center text-muted-foreground">
-                {progress}% complete
-              </p>
             </div>
           )}
 
           {/* Complete/Error State */}
           {(status === "complete" || status === "error") && result && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* Summary */}
               <div className={cn(
-                "flex items-center gap-3 p-4 rounded-xl",
-                result.success > 0 ? "bg-success/10" : "bg-danger/10"
+                "flex items-center gap-4 p-5 rounded-2xl border",
+                result.success > 0 
+                  ? "bg-success/5 border-success/20" 
+                  : "bg-destructive/5 border-destructive/20"
               )}>
-                {result.success > 0 ? (
-                  <CheckCircle2 className="w-6 h-6 text-success flex-shrink-0" />
-                ) : (
-                  <AlertCircle className="w-6 h-6 text-danger flex-shrink-0" />
-                )}
+                <div className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
+                  result.success > 0 ? "bg-success/10" : "bg-destructive/10"
+                )}>
+                  {result.success > 0 ? (
+                    <CheckCircle2 className="w-6 h-6 text-success" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-destructive" />
+                  )}
+                </div>
                 <div>
-                  <p className="font-medium">
+                  <p className="font-semibold text-foreground">
                     {result.success > 0 
                       ? `Successfully imported ${result.success} records`
                       : "Import failed"
                     }
                   </p>
                   {result.failed > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      {result.failed} records failed
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {result.failed} records failed validation
                     </p>
                   )}
                 </div>
@@ -473,49 +502,54 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
               {/* Stats */}
               {result.total > 0 && (
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 bg-muted/50 rounded-lg text-center">
-                    <p className="text-2xl font-bold">{result.total}</p>
-                    <p className="text-xs text-muted-foreground">Total</p>
+                  <div className="p-4 bg-muted/40 rounded-2xl border border-border/50 text-center">
+                    <p className="text-2xl font-bold text-foreground">{result.total}</p>
+                    <p className="text-xs text-muted-foreground font-medium mt-1">Total Rows</p>
                   </div>
-                  <div className="p-3 bg-success/10 rounded-lg text-center">
+                  <div className="p-4 bg-success/10 rounded-2xl border border-success/20 text-center">
                     <p className="text-2xl font-bold text-success">{result.success}</p>
-                    <p className="text-xs text-muted-foreground">Success</p>
+                    <p className="text-xs text-muted-foreground font-medium mt-1">Imported</p>
                   </div>
-                  <div className="p-3 bg-danger/10 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-danger">{result.failed}</p>
-                    <p className="text-xs text-muted-foreground">Failed</p>
+                  <div className="p-4 bg-destructive/10 rounded-2xl border border-destructive/20 text-center">
+                    <p className="text-2xl font-bold text-destructive">{result.failed}</p>
+                    <p className="text-xs text-muted-foreground font-medium mt-1">Failed</p>
                   </div>
                 </div>
               )}
 
               {/* Errors */}
               {result.errors.length > 0 && (
-                <div className="bg-danger/5 rounded-xl p-4 space-y-2 max-h-40 overflow-y-auto">
-                  <p className="text-sm font-medium text-danger">Errors:</p>
-                  {result.errors.map((error, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
-                      <X className="w-4 h-4 text-danger flex-shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground">
-                        {error.row > 0 && `Row ${error.row}: `}{error.message}
-                      </span>
-                    </div>
-                  ))}
+                <div className="bg-destructive/5 rounded-2xl border border-destructive/20 p-4 space-y-3 max-h-40 overflow-y-auto">
+                  <p className="text-sm font-semibold text-destructive flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Validation Errors
+                  </p>
+                  <div className="space-y-2">
+                    {result.errors.map((error, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <X className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                        <span className="text-muted-foreground">
+                          {error.row > 0 && <span className="font-medium text-foreground">Row {error.row}:</span>} {error.message}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
             {status === "idle" && (
               <>
-                <Button variant="outline" onClick={handleClose}>
+                <Button variant="outline" onClick={handleClose} className="rounded-xl">
                   Cancel
                 </Button>
                 <Button 
                   onClick={processFile} 
                   disabled={!selectedFile}
-                  className="gap-2"
+                  className="gap-2 rounded-xl"
                 >
                   <Upload className="w-4 h-4" />
                   Import
@@ -525,10 +559,10 @@ export function BulkImportModal({ open, onClose, onImportComplete }: BulkImportM
             
             {(status === "complete" || status === "error") && (
               <>
-                <Button variant="outline" onClick={resetState}>
+                <Button variant="outline" onClick={resetState} className="rounded-xl">
                   Import Another
                 </Button>
-                <Button onClick={handleClose}>
+                <Button onClick={handleClose} className="rounded-xl">
                   Done
                 </Button>
               </>

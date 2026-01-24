@@ -45,37 +45,41 @@ export function Breadcrumbs() {
       aria-label="Breadcrumb"
       className="mb-6"
     >
-      <ol className="flex items-center gap-1 text-sm">
+      <div className="inline-flex items-center gap-1 px-4 py-2.5 rounded-2xl bg-card border border-border shadow-sm">
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
           const isFirst = index === 0;
 
           return (
-            <li key={crumb.path} className="flex items-center gap-1">
+            <div key={crumb.path} className="flex items-center gap-1">
               {index > 0 && (
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 mx-1" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 mx-0.5" />
               )}
               
               {isLast ? (
-                <span className="font-medium text-foreground flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-primary/10 text-primary text-sm font-medium">
                   {crumb.label}
                 </span>
               ) : (
                 <Link
                   to={crumb.path}
                   className={cn(
-                    "flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md px-2 py-1 -mx-2 -my-1 hover:bg-muted/50",
-                    isFirst && "pl-1.5"
+                    "flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all duration-200",
+                    isFirst && "pr-2"
                   )}
                 >
-                  {isFirst && <Home className="w-3.5 h-3.5" />}
+                  {isFirst && (
+                    <div className="w-5 h-5 rounded-lg bg-muted/80 flex items-center justify-center">
+                      <Home className="w-3 h-3" />
+                    </div>
+                  )}
                   <span>{crumb.label}</span>
                 </Link>
               )}
-            </li>
+            </div>
           );
         })}
-      </ol>
+      </div>
     </motion.nav>
   );
 }

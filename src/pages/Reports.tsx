@@ -656,7 +656,7 @@ const Reports = () => {
         {reportTypes.map((report) => (
           <div 
             key={report.title} 
-            className="rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-muted/40 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-soft group"
+            className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md group"
           >
             <div className="flex items-start justify-between">
               <div className={`w-11 h-11 rounded-xl ${report.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
@@ -686,7 +686,7 @@ const Reports = () => {
       </motion.div>
 
       {/* Summary Table */}
-      <motion.div variants={item} className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+      <motion.div variants={item} className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="font-semibold text-foreground">Monthly Summary</h3>
@@ -730,7 +730,7 @@ const Reports = () => {
       </motion.div>
 
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           <div className="p-5 border-b border-border">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -781,7 +781,7 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           <div className="p-5 border-b border-border">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -856,7 +856,7 @@ const Reports = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="rounded-xl border border-border/60 p-4 bg-muted/30">
+            <div className="rounded-xl border border-border p-4 bg-muted/30">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-foreground">Report details</p>

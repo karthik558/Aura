@@ -708,144 +708,206 @@ const Tracker = () => {
 
       <Dialog open={isAddPermitOpen} onOpenChange={setIsAddPermitOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Permit</DialogTitle>
+          <DialogHeader className="pb-4 border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Add New Permit</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">Create a new permit entry</p>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="permitCode">Permit Code</Label>
-              <Input
-                id="permitCode"
-                  value={newPermit.permitCode}
-                  placeholder="Auto-generated"
-                  readOnly
-                  disabled
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={newPermit.name}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Guest name"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmationNumber">Confirmation Number *</Label>
-              <Input
-                id="confirmationNumber"
-                value={newPermit.confirmationNumber}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, confirmationNumber: e.target.value }))}
-                placeholder="Confirmation number"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="arrivalDate">Arrival Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-between text-left font-normal",
-                      !arrivalDateValue && "text-muted-foreground"
-                    )}
-                  >
-                    {arrivalDateValue ? format(arrivalDateValue, "MMM d, yyyy") : "Select date"}
-                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={arrivalDateValue}
-                    onSelect={(date) =>
-                      setNewPermit((prev) => ({
-                        ...prev,
-                        arrivalDate: date ? format(date, "yyyy-MM-dd") : "",
-                      }))
-                    }
-                    initialFocus
+          
+          <div className="space-y-5 pt-4">
+            {/* Guest Details Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-info/10 flex items-center justify-center">
+                  <UserIcon className="w-3.5 h-3.5 text-info" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Guest Details</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-8">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">Full Name *</Label>
+                  <Input
+                    id="name"
+                    value={newPermit.name}
+                    onChange={(e) => setNewPermit(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter guest name"
+                    className="h-10 rounded-xl"
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="departureDate">Departure Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-between text-left font-normal",
-                      !departureDateValue && "text-muted-foreground"
-                    )}
-                  >
-                    {departureDateValue ? format(departureDateValue, "MMM d, yyyy") : "Select date"}
-                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={departureDateValue}
-                    onSelect={(date) =>
-                      setNewPermit((prev) => ({
-                        ...prev,
-                        departureDate: date ? format(date, "yyyy-MM-dd") : "",
-                      }))
-                    }
-                    initialFocus
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmationNumber" className="text-xs font-medium text-muted-foreground">Confirmation Number *</Label>
+                  <Input
+                    id="confirmationNumber"
+                    value={newPermit.confirmationNumber}
+                    onChange={(e) => setNewPermit(prev => ({ ...prev, confirmationNumber: e.target.value }))}
+                    placeholder="Enter confirmation #"
+                    className="h-10 rounded-xl"
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="adults">Adults</Label>
-              <Input
-                id="adults"
-                type="number"
-                min={1}
-                value={newPermit.adults}
-                onChange={(e) => setNewPermit(prev => ({
-                  ...prev,
-                  adults: Math.max(1, Number(e.target.value) || 1),
-                }))}
-                placeholder="1"
-              />
+
+            {/* Travel Dates Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-success/10 flex items-center justify-center">
+                  <CalendarIcon className="w-3.5 h-3.5 text-success" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Travel Dates</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-8">
+                <div className="space-y-2">
+                  <Label htmlFor="arrivalDate" className="text-xs font-medium text-muted-foreground">Arrival Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-between text-left font-normal h-10 rounded-xl",
+                          !arrivalDateValue && "text-muted-foreground"
+                        )}
+                      >
+                        {arrivalDateValue ? format(arrivalDateValue, "MMM d, yyyy") : "Select date"}
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={arrivalDateValue}
+                        onSelect={(date) =>
+                          setNewPermit((prev) => ({
+                            ...prev,
+                            arrivalDate: date ? format(date, "yyyy-MM-dd") : "",
+                          }))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="departureDate" className="text-xs font-medium text-muted-foreground">Departure Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-between text-left font-normal h-10 rounded-xl",
+                          !departureDateValue && "text-muted-foreground"
+                        )}
+                      >
+                        {departureDateValue ? format(departureDateValue, "MMM d, yyyy") : "Select date"}
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-transparent border-0 shadow-none" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={departureDateValue}
+                        onSelect={(date) =>
+                          setNewPermit((prev) => ({
+                            ...prev,
+                            departureDate: date ? format(date, "yyyy-MM-dd") : "",
+                          }))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="property">Property</Label>
-              <Input
-                id="property"
-                value={newPermit.property}
-                onChange={(e) => setNewPermit(prev => ({ ...prev, property: e.target.value }))}
-                placeholder="Property name"
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Status</Label>
-              <Select
-                value={newPermit.status}
-                onValueChange={(value) => setNewPermit(prev => ({ ...prev, status: value as Permit["status"] }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="uploaded">Uploaded</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Additional Details Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-warning/10 flex items-center justify-center">
+                  <AlertCircle className="w-3.5 h-3.5 text-warning" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Additional Details</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-8">
+                <div className="space-y-2">
+                  <Label htmlFor="adults" className="text-xs font-medium text-muted-foreground">Number of Adults</Label>
+                  <Input
+                    id="adults"
+                    type="number"
+                    min={1}
+                    value={newPermit.adults}
+                    onChange={(e) => setNewPermit(prev => ({
+                      ...prev,
+                      adults: Math.max(1, Number(e.target.value) || 1),
+                    }))}
+                    placeholder="1"
+                    className="h-10 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="property" className="text-xs font-medium text-muted-foreground">Property</Label>
+                  <Input
+                    id="property"
+                    value={newPermit.property}
+                    onChange={(e) => setNewPermit(prev => ({ ...prev, property: e.target.value }))}
+                    placeholder="Property name"
+                    className="h-10 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Initial Status</Label>
+                  <Select
+                    value={newPermit.status}
+                    onValueChange={(value) => setNewPermit(prev => ({ ...prev, status: value as Permit["status"] }))}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">
+                        <span className="flex items-center gap-2">
+                          <Clock className="w-3.5 h-3.5 text-warning" />
+                          Pending
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="approved">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                          Approved
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="rejected">
+                        <span className="flex items-center gap-2">
+                          <XCircle className="w-3.5 h-3.5 text-destructive" />
+                          Rejected
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="uploaded">
+                        <span className="flex items-center gap-2">
+                          <Upload className="w-3.5 h-3.5 text-primary" />
+                          Uploaded
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setIsAddPermitOpen(false)}>
+
+          <div className="flex justify-end gap-2 pt-4 mt-2 border-t border-border">
+            <Button variant="outline" onClick={() => setIsAddPermitOpen(false)} className="rounded-xl">
               Cancel
             </Button>
-            <Button onClick={handleCreatePermit}>Create</Button>
+            <Button onClick={handleCreatePermit} className="gap-2 rounded-xl">
+              <Plus className="w-4 h-4" />
+              Create Permit
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -857,40 +919,50 @@ const Tracker = () => {
         transition={{ delay: 0.05 }}
         className="grid grid-cols-2 sm:grid-cols-5 gap-3"
       >
-        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
+        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center gap-2 mb-1">
-            <AlertCircle className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground font-medium">Total</span>
+            <div className="w-7 h-7 rounded-lg bg-muted/60 flex items-center justify-center">
+              <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
           </div>
-          <p className="text-2xl font-bold">{stats.total}</p>
+          <p className="text-2xl font-bold mt-2">{stats.total}</p>
+          <span className="text-xs text-muted-foreground font-medium">Total Permits</span>
         </div>
-        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
+        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-4 h-4 text-warning" />
-            <span className="text-xs text-muted-foreground font-medium">Pending</span>
+            <div className="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Clock className="w-3.5 h-3.5 text-warning" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-warning">{stats.pending}</p>
+          <p className="text-2xl font-bold text-warning mt-2">{stats.pending}</p>
+          <span className="text-xs text-muted-foreground font-medium">Pending</span>
         </div>
-        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
+        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 className="w-4 h-4 text-success" />
-            <span className="text-xs text-muted-foreground font-medium">Approved</span>
+            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-success">{stats.approved}</p>
+          <p className="text-2xl font-bold text-success mt-2">{stats.approved}</p>
+          <span className="text-xs text-muted-foreground font-medium">Approved</span>
         </div>
-        <div className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm">
+        <div className="bg-card rounded-2xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center gap-2 mb-1">
-            <XCircle className="w-4 h-4 text-destructive" />
-            <span className="text-xs text-muted-foreground font-medium">Rejected</span>
+            <div className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <XCircle className="w-3.5 h-3.5 text-destructive" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-destructive">{stats.rejected}</p>
+          <p className="text-2xl font-bold text-destructive mt-2">{stats.rejected}</p>
+          <span className="text-xs text-muted-foreground font-medium">Rejected</span>
         </div>
-        <div className="bg-card rounded-2xl border border-border/60 p-4 col-span-2 sm:col-span-1 shadow-sm">
+        <div className="bg-card rounded-2xl border border-border p-4 col-span-2 sm:col-span-1 shadow-sm hover:shadow-md transition-all duration-200">
           <div className="flex items-center gap-2 mb-1">
-            <Upload className="w-4 h-4 text-primary" />
-            <span className="text-xs text-muted-foreground font-medium">Uploaded</span>
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Upload className="w-3.5 h-3.5 text-primary" />
+            </div>
           </div>
-          <p className="text-2xl font-bold text-primary">{stats.uploaded}</p>
+          <p className="text-2xl font-bold text-primary mt-2">{stats.uploaded}</p>
+          <span className="text-xs text-muted-foreground font-medium">Uploaded</span>
         </div>
       </motion.div>
 
@@ -899,7 +971,7 @@ const Tracker = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card rounded-2xl border border-border/60 p-4 shadow-sm"
+        className="bg-card rounded-2xl border border-border p-4 shadow-sm"
       >
         <div className="flex flex-col lg:flex-row gap-3">
           {/* Search */}
