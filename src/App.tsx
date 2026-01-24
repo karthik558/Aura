@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LayoutSettingsProvider } from "@/hooks/useLayoutSettings";
 import { Preloader } from "@/components/Preloader";
@@ -27,6 +27,8 @@ const queryClient = new QueryClient();
 const App = () => {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPreloader, setShowPreloader] = useState(true);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,6 +38,11 @@ const App = () => {
       if (!isMounted) return;
       setIsAuthenticated(Boolean(data.session));
       setSessionLoaded(true);
+      // Only hide preloader on initial load
+      if (isInitialLoad.current) {
+        setShowPreloader(false);
+        isInitialLoad.current = false;
+      }
     };
 
     initSession();
@@ -64,7 +71,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <Preloader />
+          <Preloader show={showPreloader} minDuration={600} />
           <BrowserRouter>
             <Routes>
               <Route
