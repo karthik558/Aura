@@ -17,6 +17,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useUserAccess } from "@/context/UserAccessContext";
 
+type PermitStats = {
+  status: string;
+  uploaded: boolean | null;
+  created_at: string;
+  last_updated_at: string | null;
+};
+
 const container = {
   hidden: { opacity: 0 },
   show: {
@@ -96,7 +103,7 @@ const Index = () => {
         return;
       }
 
-      const permits = data ?? [];
+      const permits = (data ?? []) as PermitStats[];
       const now = new Date();
       const weekAgo = new Date();
       weekAgo.setDate(now.getDate() - 7);
