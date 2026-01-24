@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, X, Clock, FileText, User, Ticket, ArrowRight, Menu, LayoutDashboard, ClipboardList, FileBarChart, Settings, LogOut, Moon, Sun, Activity, Bell, Check, AlertTriangle } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -82,6 +82,7 @@ export function Header({ stickyHeader = true }: HeaderProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<Tables<"notifications">[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
   const { canViewPage, profile } = useUserAccess();
   const { theme, setTheme } = useTheme();
 
@@ -295,49 +296,101 @@ export function Header({ stickyHeader = true }: HeaderProps) {
                   <Menu className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-[86%] max-w-sm">
-                <div className="h-full flex flex-col">
-                  <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/60">
-                    <SheetTitle className="flex items-center gap-3">
-                      <img src={auraLogo} alt="Aura" className="h-6 w-auto logo-accent" />
+              <SheetContent side="left" className="p-0 w-[85%] max-w-[320px] border-0 bg-transparent [&>button]:hidden">
+                <motion.div 
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="h-[calc(100%-32px)] my-4 ml-4 flex flex-col bg-background/95 backdrop-blur-xl rounded-3xl border border-border/40 shadow-2xl overflow-hidden"
+                >
+                  {/* Header */}
+                  <SheetHeader className="px-5 pt-5 pb-3">
+                    <SheetTitle className="flex items-center justify-center">
+                      <img src={auraLogo} alt="Aura" className="h-8 w-auto logo-accent" />
                     </SheetTitle>
                   </SheetHeader>
-                  <div className="flex-1 overflow-y-auto px-4 py-4">
-                    <div className="space-y-1.5">
-                      {mobileNavItems
-                        .filter((item) => canViewPage(item.pageId))
-                        .map((item) => (
-                          <button
-                            key={item.path}
-                            onClick={() => {
-                              navigate(item.path);
-                              setMobileSidebarOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span className="font-medium">{item.label}</span>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="border-t border-border/60 px-4 py-4">
-                    <div className="flex items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2">
-                      <Avatar className="w-9 h-9 ring-2 ring-border">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+
+                  {/* User Card */}
+                  <div className="px-4 pb-3">
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/10">
+                      <Avatar className="w-11 h-11 ring-2 ring-primary/20 shadow-lg">
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-bold">
                           {initials || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{displayName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
+                        <p className="text-sm font-semibold truncate text-foreground">{displayName}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{roleLabel}</p>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleLogout}>
-                        <LogOut className="w-4 h-4" />
-                      </Button>
                     </div>
                   </div>
-                </div>
+
+                  {/* Navigation */}
+                  <div className="flex-1 overflow-y-auto px-3 py-2">
+                    <p className="px-3 mb-2 text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">Navigation</p>
+                    <div className="space-y-1">
+                      {mobileNavItems
+                        .filter((item) => canViewPage(item.pageId))
+                        .map((item, index) => {
+                          const isActive = location.pathname === item.path;
+                          return (
+                            <motion.button
+                              key={item.path}
+                              initial={{ x: -20, opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              transition={{ delay: index * 0.05 }}
+                              onClick={() => {
+                                navigate(item.path);
+                                setMobileSidebarOpen(false);
+                              }}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all duration-200",
+                                isActive
+                                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60 active:scale-[0.98]"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
+                                isActive ? "bg-primary-foreground/20" : "bg-muted/80"
+                              )}>
+                                <item.icon className={cn("w-[18px] h-[18px]", isActive && "text-primary-foreground")} />
+                              </div>
+                              <span className="font-medium">{item.label}</span>
+                              {isActive && (
+                                <div className="ml-auto w-2 h-2 rounded-full bg-primary-foreground/50" />
+                              )}
+                            </motion.button>
+                          );
+                        })}
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="p-4 space-y-2 border-t border-border/40">
+                    {/* Theme Toggle */}
+                    <button
+                      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all active:scale-[0.98]"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-muted/80 flex items-center justify-center">
+                        {theme === "dark" ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+                      </div>
+                      <span className="font-medium">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+                    </button>
+                    
+                    {/* Logout */}
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-destructive hover:bg-destructive/10 transition-all active:scale-[0.98]"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center">
+                        <LogOut className="w-[18px] h-[18px]" />
+                      </div>
+                      <span className="font-medium">Sign Out</span>
+                    </button>
+                  </div>
+                </motion.div>
               </SheetContent>
             </Sheet>
             <Button
@@ -379,7 +432,7 @@ export function Header({ stickyHeader = true }: HeaderProps) {
             </Link>
           </div>
 
-          {/* Mobile: Notifications + Theme + Avatar */}
+          {/* Mobile: Notifications + Avatar */}
           <div className="flex items-center gap-2 lg:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -433,14 +486,6 @@ export function Header({ stickyHeader = true }: HeaderProps) {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-xl"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">

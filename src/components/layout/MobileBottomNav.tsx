@@ -6,18 +6,16 @@ import {
   FileBarChart,
   Ticket,
   Users,
-  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserAccess } from "@/context/UserAccessContext";
 
 const navItems = [
-  { icon: LayoutDashboard, path: "/", label: "Dashboard", pageId: "dashboard" },
+  { icon: LayoutDashboard, path: "/", label: "Home", pageId: "dashboard" },
   { icon: ClipboardList, path: "/tracker", label: "Tracker", pageId: "tracker" },
   { icon: FileBarChart, path: "/reports", label: "Reports", pageId: "reports" },
   { icon: Ticket, path: "/tickets", label: "Tickets", pageId: "tickets" },
   { icon: Users, path: "/users", label: "Users", pageId: "users" },
-  { icon: Activity, path: "/system-status", label: "Status", pageId: "system-status" },
 ];
 
 export function MobileBottomNav() {
@@ -31,50 +29,59 @@ export function MobileBottomNav() {
         : navItems.filter((item) => canViewPage(item.pageId)));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
-      {/* Glass morphism background */}
-      <div className="absolute inset-0 bg-background/90 backdrop-blur-xl border-t border-border/40" />
-      
-      {/* Navigation items */}
-      <div className="relative flex items-stretch justify-around px-2 pb-safe">
-        {visibleNavItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          const Icon = item.icon;
-          
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="relative flex-1 flex items-center justify-center py-3"
-            >
-              {/* Active indicator line */}
-              {isActive && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute top-0 inset-x-0 mx-auto w-8 h-0.5 bg-primary rounded-full"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-              
-              {/* Icon */}
-              <motion.div
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.1 }}
+    <nav className="fixed bottom-4 left-4 right-4 z-50 lg:hidden">
+      {/* Floating pill container */}
+      <motion.div 
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="relative bg-background/80 backdrop-blur-2xl rounded-[28px] border border-border/50 shadow-2xl shadow-black/10 dark:shadow-black/30"
+      >
+        {/* Inner glow effect */}
+        <div className="absolute inset-0 rounded-[28px] bg-gradient-to-t from-transparent via-transparent to-white/5 pointer-events-none" />
+        
+        {/* Navigation items */}
+        <div className="relative flex items-center justify-around px-3 py-2">
+          {visibleNavItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            const Icon = item.icon;
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="relative flex items-center justify-center px-5 py-3"
               >
-                <Icon 
-                  className={cn(
-                    "w-6 h-6 transition-colors duration-150",
-                    isActive 
-                      ? "text-primary" 
-                      : "text-muted-foreground"
-                  )} 
-                  strokeWidth={isActive ? 2 : 1.5}
-                />
-              </motion.div>
-            </Link>
-          );
-        })}
-      </div>
+                {/* Active background - rounded rectangle pill */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabBg"
+                    className="absolute inset-1 bg-primary rounded-full"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                
+                {/* Icon */}
+                <motion.div
+                  whileTap={{ scale: 0.85 }}
+                  transition={{ duration: 0.1 }}
+                  className="relative z-10"
+                >
+                  <Icon 
+                    className={cn(
+                      "w-5 h-5 transition-all duration-200",
+                      isActive 
+                        ? "text-primary-foreground" 
+                        : "text-muted-foreground"
+                    )} 
+                    strokeWidth={isActive ? 2.5 : 1.5}
+                  />
+                </motion.div>
+              </Link>
+            );
+          })}
+        </div>
+      </motion.div>
     </nav>
   );
 }
